@@ -439,6 +439,11 @@ body[data-theme=studio] .bcount,body[data-theme=studio] .badge{box-shadow:none}
 </div>
 </div></div>
 
+<div id="tview" class="veil hidden" onclick="if(event.target===this)closeTask()"><div class="glass" style="width:min(460px,94vw)" data-screen-label="Vazifa">
+<div class="win-head"><div class="grow"><h2><span class="dot" id="tvDot" style="background:var(--acc-info);box-shadow:0 0 8px var(--acc-info)"></span>Vazifa</h2></div><button class="xbtn" onclick="closeTask()">✕</button></div>
+<div class="win-body" id="tvBody"></div>
+</div></div>
+
 <div id="modal" class="veil hidden" onclick="if(event.target===this)closeModal()"><div class="glass" style="width:min(460px,94vw)" data-screen-label="Yangi yozuv">
 <div class="win-head"><div class="grow"><h2><span class="dot" style="background:var(--acc-info);box-shadow:0 0 8px var(--acc-info)"></span>Yangi yozuv</h2></div><button class="xbtn" onclick="closeModal()">✕</button></div>
 <div class="win-body">
@@ -603,8 +608,8 @@ if(n<0){c=CHIPC.over;tx='kechikdi';}else if(n===0){c=CHIPC.near;tx='bugun';}else
 return'<span class="due-chip" style="color:'+c+';border-color:'+c+'55;background:'+c+'12">'+tx+'</span>';}
 function countTo(node,to){if(!node)return;var from=Number((node.textContent||'0').replace(/\D/g,''))||0;if(from===to){node.textContent=to;return;}
 var t0=performance.now();(function st(t){var p=Math.min(1,(t-t0)/600);p=1-Math.pow(1-p,3);node.textContent=Math.round(from+(to-from)*p);if(p<1)requestAnimationFrame(st);})(t0);}
-function taskRow(t,showBiz){var col=SSTAT[t.status]||'#888';var due=t.due_at?String(t.due_at).slice(0,10):'';var sl=slugOf(t);
-return'<div class="row'+(sl?' clk':'')+'"'+(sl?' onclick="goPanel(\''+esc(sl)+'\',\'tasks\')"':'')+'><span class="sdot" style="color:'+col+'" title="'+(SNAME[t.status]||t.status)+'" onclick="event.stopPropagation();cycle(\''+t.id+'\',\''+t.status+'\')"></span><div class="grow"><div>'+esc(t.title)+'</div><div class="sub">'+(showBiz?esc(t.businesses.name):'')+(due?(showBiz?' · ':'')+due:'')+(t.assignee_hint?' · '+esc(t.assignee_hint):'')+'</div></div>'+dueChip(t)+'</div>';}
+function taskRow(t,showBiz){var col=SSTAT[t.status]||'#888';var due=t.due_at?String(t.due_at).slice(0,10):'';TASKMAP[t.id]=t;
+return'<div class="row clk" onclick="openTask(\''+t.id+'\')"><span class="sdot" style="color:'+col+'" title="'+(SNAME[t.status]||t.status)+'" onclick="event.stopPropagation();cycle(\''+t.id+'\',\''+t.status+'\')"></span><div class="grow"><div>'+esc(t.title)+'</div><div class="sub">'+(showBiz?esc(t.businesses.name):'')+(due?(showBiz?' · ':'')+due:'')+(t.assignee_hint?' · '+esc(t.assignee_hint):'')+'</div></div>'+dueChip(t)+'</div>';}
 function bizIdOf(t){if(t.business_id)return t.business_id;var nm=t.businesses&&t.businesses.name;var b=BIZ.find(function(x){return x.name===nm;});return b?b.id:null;}
 function slugOf(t){if(t.businesses&&t.businesses.slug)return t.businesses.slug;var id=bizIdOf(t);var b=BIZ.find(function(x){return x.id===id;});return b?b.slug:null;}
 function goPanel(slug,tab){openPanel(slug);var _i={tasks:0,money:1,budget:2,plan:3,stats:4,act:5};if(tab&&_i[tab]!=null)bpTab(_i[tab]);}
@@ -620,11 +625,11 @@ var seg=el('bs-'+bz.id);if(seg){var stc={open:0,in_progress:0,done:0,cancelled:0
 ['open','in_progress','done','cancelled'].forEach(function(k){if(stc[k])sh+='<i style="width:'+(stc[k]/(tot||1)*100)+'%;background:'+SSTAT[k]+';box-shadow:0 0 8px '+SSTAT[k]+'44"></i>';});
 seg.innerHTML=sh||'<i style="width:100%;background:rgba(90,62,35,.12)"></i>';}});
 var upc=ts.filter(function(t){return t.due_at&&t.status!=='done'&&t.status!=='cancelled';}).sort(function(a,b){return String(a.due_at).localeCompare(String(b.due_at));});
-var uh='';upc.slice(0,7).forEach(function(t){var sl=slugOf(t);uh+='<div class="row'+(sl?' clk':'')+'"'+(sl?' onclick="event.stopPropagation();goPanel(\''+esc(sl)+'\',\'tasks\')"':'')+'><div class="grow"><div>'+esc(t.title)+'</div><div class="sub">'+esc(t.businesses.name)+' · '+String(t.due_at).slice(0,10)+'</div></div>'+dueChip(t)+'</div>';});
+var uh='';upc.slice(0,7).forEach(function(t){TASKMAP[t.id]=t;uh+='<div class="row clk" onclick="event.stopPropagation();openTask(\''+t.id+'\')"><div class="grow"><div>'+esc(t.title)+'</div><div class="sub">'+esc(t.businesses.name)+' · '+String(t.due_at).slice(0,10)+'</div></div>'+dueChip(t)+'</div>';});
 el('upcoming').innerHTML=uh||'<div class="empty">Muddatli vazifa yo\u2018q</div>';
 if(upc.length){var t0=upc[0];var bid=bizIdOf(t0);var bi=BIZ.findIndex(function(b){return b.id===bid;});var cc=bi>-1?bizColor(BIZ[bi],bi)[0]:'#ffb84d';
 el('kpiNext').innerHTML='<i style="background:'+cc+';box-shadow:0 0 5px '+cc+'"></i><span>'+esc(t0.title)+'</span>'+dueChip(t0);
-var s0=slugOf(t0);el('kpiNextPanel').onclick=function(){goPanel(s0||null,'tasks');};}
+TASKMAP[t0.id]=t0;el('kpiNextPanel').onclick=function(){openTask(t0.id);};}
 else{el('kpiNext').innerHTML='<span style="opacity:.4">—</span>';el('kpiNextPanel').onclick=function(){goPanel(null,'tasks');};}
 updateBpStats();}
 function fillTrx(){var xs=ALL.trx||[];
@@ -795,7 +800,7 @@ var money='';var ci=0;Object.keys(sums).forEach(function(k){var m=Math.max(sums[
 money+='<div class="bar-row"><b class="cur">'+k+'</b><div class="bars"><div class="bar-track"><i class="bar-fill up-f" style="width:'+(sums[k].income/m*100)+'%;animation-delay:'+(ci*.12)+'s"></i></div><div class="bar-track"><i class="bar-fill dn-f" style="width:'+(sums[k].expense/m*100)+'%;animation-delay:'+(ci*.12+.06)+'s"></i></div></div><span class="net '+(net>=0?'up':'dn')+'">'+(net>=0?'+':'−')+fmt(Math.abs(net))+'</span></div>';ci++;});
 if(!money)money='<div class="empty">Tranzaksiya yo&#39;q</div>';
 var upc=tasks.filter(function(t){return t.due_at&&t.status!=='done'&&t.status!=='cancelled';}).sort(function(a,b){return String(a.due_at).localeCompare(String(b.due_at));}).slice(0,6);
-var uh='';upc.forEach(function(t){uh+='<div class="row"><div class="grow"><div>'+esc(t.title)+'</div><div class="sub">'+esc(t.businesses.name)+' · '+String(t.due_at).slice(0,10)+'</div></div>'+dueChip(t)+'</div>';});
+var uh='';upc.forEach(function(t){TASKMAP[t.id]=t;uh+='<div class="row clk" onclick="openTask(\''+t.id+'\')"><div class="grow"><div>'+esc(t.title)+'</div><div class="sub">'+esc(t.businesses.name)+' · '+String(t.due_at).slice(0,10)+'</div></div>'+dueChip(t)+'</div>';});
 if(!uh)uh='<div class="empty">Muddatli vazifa yo&#39;q</div>';
 pb().innerHTML='<div class="f-label" style="margin-top:2px">Vazifalar holati · '+tot+'</div><div class="seg-bar" style="height:10px">'+seg+'</div><div class="legend">'+leg+'</div>'
 +'<div class="f-label" style="margin-top:18px">Moliya oqimi · kirim / xarajat</div>'+money
@@ -839,7 +844,7 @@ if(!FUNDS.length)return;var i=-1;FUNDS.forEach(function(f,ix){if(f.id===fid)i=ix
 api('fund_assign',{trx_id:tid,fund_id:nx.id}).then(function(r){if(r.ok){toast('→ '+nx.name);loadTab('money');}else toast('Xatolik');}).catch(function(){toast('Xatolik');});}
 function renderPlan(tasks,plan){plan=plan||[];
 var upc=tasks.filter(function(t){return t.due_at&&t.status!=='done'&&t.status!=='cancelled';}).sort(function(a,b){return String(a.due_at).localeCompare(String(b.due_at));});
-var uh='';upc.slice(0,6).forEach(function(t){uh+='<div class="row"><div class="grow"><div>'+esc(t.title)+'</div><div class="sub">'+esc(t.businesses.name)+' · '+String(t.due_at).slice(0,10)+'</div></div>'+dueChip(t)+'</div>';});
+var uh='';upc.slice(0,6).forEach(function(t){TASKMAP[t.id]=t;uh+='<div class="row clk" onclick="openTask(\''+t.id+'\')"><div class="grow"><div>'+esc(t.title)+'</div><div class="sub">'+esc(t.businesses.name)+' · '+String(t.due_at).slice(0,10)+'</div></div>'+dueChip(t)+'</div>';});
 if(!uh)uh='<div class="empty">Muddatli vazifa yo&#39;q</div>';
 var ph='';plan.forEach(function(p){var inc=p.kind==='income';
 ph+='<div class="row"><span class="dirg '+(inc?'up':'dn')+'">'+(inc?'▲':'▼')+'</span><div class="grow"><div>'+esc(p.title)+'</div><div class="sub">'+esc((p.businesses&&p.businesses.name)||'')+(p.due_on?' · '+p.due_on:'')+'</div></div><span class="amt '+(inc?'up':'dn')+'">'+(inc?'+':'−')+fmt(p.amount)+' '+esc(p.currency)+'</span><span class="clk" style="color:var(--st-done);font-weight:700;padding:2px 6px" title="Bajarildi — tranzaksiyaga yoziladi" onclick="planSetSt(\''+p.id+'\',\'done\')">✓</span><span class="clk" style="color:var(--alert);padding:2px 4px" title="Bekor qilish" onclick="planSetSt(\''+p.id+'\',\'cancelled\')">✕</span></div>';});
@@ -869,6 +874,30 @@ if(DEMO_ON){var t=DEMO.tasks.find(function(x){return x.id===id;});if(t)t.status=
 api('task_set_status',{id:id,status:next}).then(function(){toast('✓ '+SNAME[next]);if(!el('bizpage').classList.contains('hidden'))loadTab('tasks');boot();});}
 function openModal(){mState={kind:'task',biz:(curSlug&&!el('bizpage').classList.contains('hidden'))?curSlug:(BIZ[0]?BIZ[0].slug:null),dir:'expense',cur:'UZS'};drawModal();el('modal').classList.remove('hidden');}
 function closeModal(){el('modal').classList.add('hidden');}
+var TASKMAP={};
+function openTask(id){var t=TASKMAP[id];if(!t)return;var col=SSTAT[t.status]||'#888';
+var d=el('tvDot');d.style.background=col;d.style.boxShadow='0 0 8px '+col;
+var SRCN={voice:'Ovozli xabar',text:'Matn',file:'Fayl',crm_sync:'Hanguk CRM',command:'Buyruq'};
+var h='<div style="font-size:15px;font-weight:600;line-height:1.5">'+esc(t.title)+'</div>';
+h+='<div class="f-label">Holat</div><div class="chips seg opts">';
+['open','in_progress','done','cancelled'].forEach(function(s){h+='<button class="chip'+(t.status===s?' on':'')+'" onclick="tvStatus(\''+t.id+'\',\''+s+'\')">'+SNAME[s]+'</button>';});
+h+='</div>';
+var rows=[];
+if(t.businesses&&t.businesses.name)rows.push(['Biznes',esc(t.businesses.name)]);
+if(t.due_at)rows.push(['Muddat',String(t.due_at).slice(0,10)+' '+dueChip(t)]);
+if(t.assignee_hint)rows.push(['Mas’ul',esc(t.assignee_hint)]);
+if(t.priority&&t.priority!=='normal')rows.push(['Muhimlik',esc(t.priority)]);
+if(t.source)rows.push(['Manba',SRCN[t.source]||esc(t.source)]);
+if(t.created_at)rows.push(['Yaratilgan',String(t.created_at).slice(0,10)]);
+rows.forEach(function(r){h+='<div class="row" style="cursor:default"><div class="sub" style="width:92px;flex:none">'+r[0]+'</div><div class="grow">'+r[1]+'</div></div>';});
+if(t.description)h+='<div class="f-label">Tavsif</div><div class="sub" style="white-space:pre-line;line-height:1.6;font-size:12.5px">'+esc(t.description)+'</div>';
+var sl=slugOf(t);
+if(sl)h+='<button class="btn" style="margin-top:14px" onclick="closeTask();goPanel(\''+esc(sl)+'\',\'tasks\')">Biznes sahifasi →</button>';
+el('tvBody').innerHTML=h;el('tview').classList.remove('hidden');}
+function closeTask(){el('tview').classList.add('hidden');}
+function tvStatus(id,st){var t=TASKMAP[id];if(!t||t.status===st)return;
+if(DEMO_ON){var d2=DEMO.tasks.find(function(x){return x.id===id;});if(d2)d2.status=st;t.status=st;toast('✓ '+SNAME[st]);openTask(id);if(!el('bizpage').classList.contains('hidden'))loadTab('tasks');demoRefresh();return;}
+api('task_set_status',{id:id,status:st}).then(function(){t.status=st;toast('✓ '+SNAME[st]);openTask(id);if(!el('bizpage').classList.contains('hidden'))loadTab('tasks');boot();}).catch(function(){toast('Xatolik');});}
 function drawModal(){var kk=[['task','<i class="tcode">TSK</i>Vazifa'],['trx','<i class="tcode">FIN</i>Tranzaksiya']];var h='';
 kk.forEach(function(k){h+='<button class="chip'+(mState.kind===k[0]?' on':'')+'" onclick="mSet(&#39;kind&#39;,&#39;'+k[0]+'&#39;)">'+k[1]+'</button>';});el('mKind').innerHTML=h;
 h='';BIZ.forEach(function(b){h+='<button class="chip'+(mState.biz===b.slug?' on':'')+'" onclick="mSet(&#39;biz&#39;,&#39;'+b.slug+'&#39;)">'+esc(b.name)+'</button>';});el('mBiz').innerHTML=h;
