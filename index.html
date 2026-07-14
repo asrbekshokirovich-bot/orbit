@@ -261,19 +261,22 @@ input::placeholder{color:var(--ink-dim);opacity:.55}
 #gate p{font-size:12.5px;opacity:.55;margin:6px 0 16px;letter-spacing:.3px}
 
 /* business page */
-#bizpage{position:fixed;inset:0;z-index:15;overflow:auto;background:radial-gradient(ellipse at 50% 0%,var(--bg1) 0%,var(--bg2) 62%);animation:pagein .35s var(--ease-float);padding:80px 20px calc(120px + env(safe-area-inset-bottom,0px));scrollbar-width:thin;scrollbar-color:var(--stroke) transparent}
+#bizpage{position:fixed;inset:0;z-index:15;overflow:auto;background:radial-gradient(ellipse at 50% 0%,var(--bg1) 0%,var(--bg2) 62%);animation:pagein .35s var(--ease-float);padding:0 0 calc(120px + env(safe-area-inset-bottom,0px));scrollbar-width:thin;scrollbar-color:var(--stroke) transparent}
 #bizpage::-webkit-scrollbar{width:5px}
 #bizpage::-webkit-scrollbar-thumb{background:var(--stroke);border-radius:99px}
-.bp-inner{max-width:1080px;margin:0 auto}
+.bp-inner{max-width:1080px;margin:0 auto;padding:14px 20px 0}
 .backbtn{border:1px solid var(--stroke);background:var(--row);color:var(--ink);border-radius:8px;padding:9px 18px;font-size:12px;letter-spacing:1px;cursor:pointer;font-family:inherit;transition:all .2s;-webkit-tap-highlight-color:transparent}
 .backbtn:hover{background:var(--row-hover);transform:translateX(-2px)}
 .backbtn:active{transform:scale(.96)}
-.bp-head{display:flex;align-items:center;gap:14px;margin:20px 0 8px;flex-wrap:wrap}
-.bp-head .orbchip{width:46px;height:46px}
-.bp-head h2{font-size:23px;font-weight:700;letter-spacing:.3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-body[data-theme=ledger] .bp-head h2{font-family:'Caveat',cursive;font-size:30px}
-#pSub{font-size:11px;opacity:.7;margin-top:3px;letter-spacing:.5px}
-#bpStats{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+#bpbar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;padding:calc(var(--cbarH,48px) + 9px) 18px 9px;background:linear-gradient(180deg,var(--bg1),var(--bg2));border-bottom:1px solid var(--stroke);box-shadow:0 8px 20px rgba(0,0,0,.16)}
+#bpbar .backbtn{flex:none;padding:8px 13px}
+#bpbar .orbchip{width:32px;height:32px;flex:none}
+.bpb-t{min-width:0;display:flex;align-items:baseline;gap:10px}
+#bpbar h2{font-size:17px;font-weight:700;letter-spacing:.3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body[data-theme=ledger] #bpbar h2{font-family:'Caveat',cursive;font-size:24px}
+#pSub{font-size:10.5px;opacity:.7;letter-spacing:.5px;white-space:nowrap;flex:none}
+#bpStats{display:flex;gap:8px;margin-left:auto;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;min-width:0}
+#bpStats::-webkit-scrollbar{display:none}
 .bps{font-family:var(--font-mono);font-size:11.5px;background:var(--inset);border:1px solid var(--stroke-soft);padding:7px 12px;border-radius:8px;white-space:nowrap}
 .bps b{font-family:var(--font-ui);font-size:9px;letter-spacing:1.2px;opacity:.7;margin-right:5px;font-weight:600;text-transform:uppercase}
 #bizpage .chips.seg{overflow-x:auto;scrollbar-width:none;margin-top:16px}
@@ -286,8 +289,17 @@ body[data-theme=ledger] .note{font-size:13.5px}
 .budget-row .ic{font-family:var(--font-mono);font-size:8.5px;letter-spacing:1px;color:var(--acc-info);width:36px;height:26px;border-radius:4px;background:color-mix(in srgb,var(--acc-info) 8%,transparent);border:1px solid color-mix(in srgb,var(--acc-info) 30%,transparent);display:flex;align-items:center;justify-content:center;flex:none}
 .budget-row .nm{width:110px;flex:none;font-size:13px}
 .budget-row .bar-track{flex:1}
-#bpgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:10px;margin-top:16px}
-#bpgrid .panel-b{max-height:390px}
+#bpTabsBar{display:flex;gap:6px;margin-left:12px;overflow-x:auto;scrollbar-width:none;min-width:0;flex:1}
+#bpTabsBar::-webkit-scrollbar{display:none}
+.bpt{flex:none;border:1px solid var(--stroke-soft);background:transparent;color:inherit;opacity:.6;font-family:var(--font-mono);font-size:10px;letter-spacing:1.6px;text-transform:uppercase;padding:8px 13px;border-radius:7px;cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent}
+.bpt:hover{opacity:.9;background:var(--row)}
+.bpt:active{transform:scale(.96)}
+.bpt.on{opacity:1;background:var(--row-hover);border-color:var(--acc-line);box-shadow:inset 0 0 0 1px var(--acc-line)}
+body[data-theme=ledger] .bpt{font-family:'Caveat',cursive;font-size:17px;letter-spacing:.5px;text-transform:none;padding:5px 13px}
+#bpgrid{display:block;margin-top:14px}
+#bpgrid>.panel{display:none;min-height:calc(100vh - var(--cbarH,48px) - 220px)}
+#bpgrid>.panel.act{display:flex;animation:floatin .4s var(--ease-float)}
+#bpgrid .panel-b{max-height:none}
 .clk{cursor:pointer;-webkit-tap-highlight-color:transparent}
 
 /* AI */
@@ -367,10 +379,16 @@ body[data-theme=studio] .bcount,body[data-theme=studio] .badge{box-shadow:none}
   #gate .glass{width:min(380px,92vw);border-radius:10px;animation:floatin .35s var(--ease-float)}
   .chips.seg .chip{padding:9px 5px;font-size:11px}
   .net{min-width:70px;font-size:11px}
-  #bizpage{padding:70px 12px calc(110px + env(safe-area-inset-bottom,0px))}
-  .bp-head .orbchip{width:36px;height:36px}
-  .bp-head h2{font-size:18px}
-  #bpStats{justify-content:flex-start;width:100%}
+  #bizpage{padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))}
+  #bpbar{flex-wrap:wrap;gap:9px;padding-left:12px;padding-right:12px}
+  #bpTabsBar{width:100%;order:9;margin-left:0}
+  #bpgrid>.panel{min-height:0}
+  #bpbar .orbchip{width:26px;height:26px}
+  #bpbar h2{font-size:15px}
+  .bb-t{display:none}
+  #pSub{display:none}
+  #bpStats{width:100%;margin-left:0}
+  .bp-inner{padding:10px 12px 0}
   .two{grid-template-columns:1fr}
   .budget-row .nm{width:84px;font-size:12px}
 }
@@ -406,9 +424,9 @@ body[data-theme=studio] .bcount,body[data-theme=studio] .badge{box-shadow:none}
 </div>
 </div>
 
-<div id="bizpage" class="hidden" data-screen-label="Biznes sahifasi"><div class="bp-inner">
-<button class="backbtn" onclick="closePanel()">← Orqaga</button>
-<div class="bp-head"><i class="orbchip" id="bpOrb"></i><div class="grow" style="flex:1;min-width:0"><h2 id="pTitle"></h2><div id="pSub"></div></div><div id="bpStats"></div></div>
+<div id="bizpage" class="hidden" data-screen-label="Biznes sahifasi">
+<div id="bpbar"><button class="backbtn" onclick="closePanel()" aria-label="Orqaga">←<span class="bb-t"> Orqaga</span></button><i class="orbchip" id="bpOrb"></i><div class="bpb-t"><h2 id="pTitle"></h2><div id="pSub"></div></div><div id="bpTabsBar"><button class="bpt on" onclick="bpTab(0)">Vazifalar</button><button class="bpt" onclick="bpTab(1)">Moliya</button><button class="bpt" onclick="bpTab(2)">Budjet</button><button class="bpt" onclick="bpTab(3)">Kelgusi</button><button class="bpt" onclick="bpTab(4)">Tahlil</button><button class="bpt" onclick="bpTab(5)">Faoliyat</button></div><div id="bpStats"></div></div>
+<div class="bp-inner">
 <div class="chips seg hidden" id="pTabs"></div>
 <div id="pBody" class="hidden"></div>
 <div id="bpgrid">
@@ -456,7 +474,7 @@ studio:{colors:{hanguk:['#ff7a1a','#8a3d00'],skillhub:['#141414','#000000'],pers
 ledger:{colors:{hanguk:['#2f4a6b','#1a2c42'],skillhub:['#7a2f2b','#4a1a17'],personal:['#a8742f','#6b4a1c']},palette:[['#3f6b2e','#24421a'],['#6b3f6b','#3f2440'],['#8a6d3b','#54401e'],['#555049','#332e28'],['#7a5230','#4a3118']],sstat:{open:'#2f4a6b',in_progress:'#a8742f',done:'#3f6b2e',cancelled:'#8a8378'},star:['#8a6d3b','#6b4a2b','#a08850','#54401e'],neb:[[.16,.2,.5,'107,74,43',.10],[.85,.75,.55,'90,50,20',.08],[.6,.1,.38,'139,47,43',.04],[.3,.9,.44,'107,74,43',.06]],core:'107,74,43',coreHi:'74,49,24',coreA:.9,chip:{over:'#8b2f2b',near:'#a8742f',far:'#8a6d3b'},bot:{aura:['#8a6d3b','#8b2f2b'],body:'#4a3118',eye:'#f3e6c8',glow:0,add:0}}};
 function setTheme(n){if(!THEMES[n])n='holo';try{localStorage.setItem('orbit_theme',n);}catch(e){}
 document.body.setAttribute('data-theme',n);var T=THEMES[n];
-COLORS=T.colors;PALETTE=T.palette;SSTAT=T.sstat;STAR_TINTS=T.star;NEB=T.neb;CORE=T.core;COREHI=T.coreHi;COREA=T.coreA;CHIPC=T.chip;aiWaveStyle();
+COLORS=T.colors;PALETTE=T.palette;SSTAT=T.sstat;STAR_TINTS=T.star;NEB=T.neb;CORE=T.core;COREHI=T.coreHi;COREA=T.coreA;CHIPC=T.chip;aiWaveStyle();setBarH();
 try{buildStars();paintNebula();}catch(e){}
 var bs=document.querySelectorAll('#themeSw button');for(var i=0;i<bs.length;i++)bs[i].classList.toggle('on',bs[i].getAttribute('data-t')===n);
 if(OV){renderPlanets(OV);renderHud(OV);if(ALL.tasks)fillTasks();if(ALL.trx)fillTrx();if(ALL.act)fillFeed();}
@@ -589,8 +607,7 @@ function taskRow(t,showBiz){var col=SSTAT[t.status]||'#888';var due=t.due_at?Str
 return'<div class="row'+(sl?' clk':'')+'"'+(sl?' onclick="goPanel(\''+esc(sl)+'\',\'tasks\')"':'')+'><span class="sdot" style="color:'+col+'" title="'+(SNAME[t.status]||t.status)+'" onclick="event.stopPropagation();cycle(\''+t.id+'\',\''+t.status+'\')"></span><div class="grow"><div>'+esc(t.title)+'</div><div class="sub">'+(showBiz?esc(t.businesses.name):'')+(due?(showBiz?' · ':'')+due:'')+(t.assignee_hint?' · '+esc(t.assignee_hint):'')+'</div></div>'+dueChip(t)+'</div>';}
 function bizIdOf(t){if(t.business_id)return t.business_id;var nm=t.businesses&&t.businesses.name;var b=BIZ.find(function(x){return x.name===nm;});return b?b.id:null;}
 function slugOf(t){if(t.businesses&&t.businesses.slug)return t.businesses.slug;var id=bizIdOf(t);var b=BIZ.find(function(x){return x.id===id;});return b?b.slug:null;}
-function goPanel(slug,tab){openPanel(slug);if(tab){var _m={tasks:'bpTasks',money:'bpMoney',budget:'bpBudget',plan:'bpPlan',stats:'bpAnaliz',act:'bpAct'};
-setTimeout(function(){var p=el(_m[tab]);var pp=p&&p.closest?p.closest('.panel'):null;if(pp&&pp.scrollIntoView)pp.scrollIntoView({behavior:'smooth',block:'start'});},150);}}
+function goPanel(slug,tab){openPanel(slug);var _i={tasks:0,money:1,budget:2,plan:3,stats:4,act:5};if(tab&&_i[tab]!=null)bpTab(_i[tab]);}
 function fillTasks(){var ts=ALL.tasks||[];
 BIZ.forEach(function(bz){var host=el('bt-'+bz.id);if(!host)return;
 var mine=ts.filter(function(t){return bizIdOf(t)===bz.id;});
@@ -721,7 +738,12 @@ var u=new Uint8Array(ab),bin='',CH=0x8000;for(var k=0;k<u.length;k+=CH)bin+=Stri
 return btoa(bin);}
 var PENDING=false;
 /* ================= detail page (har bir biznes — alohida sahifa) ================= */
-function openPanel(slug,fromRoute){curSlug=slug;var bz=BIZ.find(function(b){return b.slug===slug;});
+function setBarH(){var b=el('cbar');if(b)document.documentElement.style.setProperty('--cbarH',b.offsetHeight+'px');}
+addEventListener('resize',setBarH);setBarH();
+var BPTAB=0;
+function bpTab(i){BPTAB=i;var g=el('bpgrid');if(!g)return;var ps=g.children,tb=el('bpTabsBar').children;
+for(var k=0;k<ps.length;k++){ps[k].classList.toggle('act',k===i);if(tb[k])tb[k].classList.toggle('on',k===i);}}
+function openPanel(slug,fromRoute){curSlug=slug;bpTab(BPTAB);var bz=BIZ.find(function(b){return b.slug===slug;});
 var i=Math.max(BIZ.indexOf(bz),0);var pair=slug?bizColor(bz||{slug:slug},i):['#ffb84d','#7c3a06'];
 if(!fromRoute){try{location.hash='#biz/'+(slug==null?'all':encodeURIComponent(slug));}catch(e){}}
 var orb=el('bpOrb');orb.style.background='radial-gradient(circle at 32% 28%,'+pair[0]+','+pair[1]+' 68%)';orb.style.boxShadow='0 0 18px '+pair[0];
