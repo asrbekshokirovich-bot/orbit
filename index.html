@@ -487,17 +487,20 @@ tasks:[
 {id:'t6',status:'open',title:'Sport zali a\u02bczoligini yangilash',due_at:'2026-07-15',businesses:{name:'Personal'},business_id:'d3',assignee_hint:null}],
 trx:[
 {id:'x1',direction:'income',amount:12500000,currency:'UZS',description:'Kurs to\u02bclovlari',counterparty:null,businesses:{name:'SkillHub'},business_id:'d2',occurred_at:'2026-07-10'},
-{id:'x2',direction:'expense',amount:4200000,currency:'UZS',description:'Ofis ijarasi',counterparty:null,businesses:{name:'SkillHub'},business_id:'d2',occurred_at:'2026-07-05'},
+{id:'x2',direction:'expense',amount:4200000,currency:'UZS',description:'Ofis ijarasi',counterparty:null,businesses:{name:'SkillHub'},business_id:'d2',occurred_at:'2026-07-05',fund_id:'f3',funds:{name:'Umumiy'}},
 {id:'x3',direction:'income',amount:900,currency:'USD',description:'Konsalting',counterparty:null,businesses:{name:'Hanguk 2026'},business_id:'d1',occurred_at:'2026-07-08'},
-{id:'x4',direction:'expense',amount:350000,currency:'KRW',description:'Hujjat tarjimasi',counterparty:null,businesses:{name:'Hanguk 2026'},business_id:'d1',occurred_at:'2026-07-03'}],
+{id:'x4',direction:'expense',amount:350000,currency:'KRW',description:'Hujjat tarjimasi',counterparty:null,businesses:{name:'Hanguk 2026'},business_id:'d1',occurred_at:'2026-07-03',fund_id:'f4',funds:{name:'Umumiy'}}],
 activity:[
 {action:'task_add',entity:'Viza hujjatlarini topshirish',created_at:'2026-07-12T09:14'},
 {action:'trx_add',entity:'Kurs to\u02bclovlari',created_at:'2026-07-10T18:02'},
 {action:'task_done',entity:'Iyul byudjetini tasdiqlash',created_at:'2026-07-09T11:40'}],
-budgets:[
-{business_id:'d1',ym:'2026-07',currency:'UZS',amount:8000000,businesses:{name:'Hanguk 2026',slug:'hanguk'}},
-{business_id:'d2',ym:'2026-07',currency:'UZS',amount:5000000,businesses:{name:'SkillHub',slug:'skillhub'}}],
-spent:{'d1/UZS':2100000,'d2/UZS':4200000},
+funds:[
+{id:'f1',business_id:'d2',name:'Oylik',percent:30,is_general:false,businesses:{name:'SkillHub',slug:'skillhub'}},
+{id:'f2',business_id:'d2',name:'Marketing',percent:10,is_general:false,businesses:{name:'SkillHub',slug:'skillhub'}},
+{id:'f3',business_id:'d2',name:'Umumiy',percent:0,is_general:true,businesses:{name:'SkillHub',slug:'skillhub'}},
+{id:'f4',business_id:'d1',name:'Umumiy',percent:0,is_general:true,businesses:{name:'Hanguk 2026',slug:'hanguk'}}],
+falloc:{'f1/UZS':3750000,'f2/UZS':1250000,'f3/UZS':7500000,'f4/USD':900},
+fspent:{'f2/UZS':400000,'f3/UZS':4200000,'f4/KRW':350000},
 plan:[
 {id:'p1',kind:'income',title:'Kurs to\u02bclovi (yangi guruh)',amount:6000000,currency:'UZS',due_on:'2026-07-25',businesses:{name:'SkillHub',slug:'skillhub'}},
 {id:'p2',kind:'expense',title:'Ofis ijarasi (avgust)',amount:4200000,currency:'UZS',due_on:'2026-08-01',businesses:{name:'Hanguk 2026',slug:'hanguk'}}]};
@@ -505,7 +508,7 @@ function demoOverview(){return{businesses:DEMO.businesses,open_tasks:DEMO.tasks.
 function demoTab(tab){var nm=(BIZ.find(function(b){return b.slug===curSlug;})||{}).name;
 if(tab==='tasks')return{tasks:DEMO.tasks.filter(function(t){return !curSlug||t.businesses.name===nm;})};
 if(tab==='money')return{trx:DEMO.trx.filter(function(x){return !curSlug||x.businesses.name===nm;})};
-if(tab==='budget')return{ym:new Date().toISOString().slice(0,7),budgets:DEMO.budgets.filter(function(r){return !curSlug||r.businesses.slug===curSlug;}),spent:DEMO.spent};
+if(tab==='budget')return{funds:DEMO.funds.filter(function(r){return !curSlug||r.businesses.slug===curSlug;}),alloc:DEMO.falloc,spent:DEMO.fspent};
 if(tab==='plan')return{plan:DEMO.plan.filter(function(p){return !curSlug||p.businesses.slug===curSlug;})};
 return{activity:DEMO.activity};}
 function demoRefresh(){var d=demoOverview();OV=d;BIZ=d.businesses;renderPlanets(d);renderHud(d);ALL.tasks=DEMO.tasks;ALL.trx=DEMO.trx;ALL.act=DEMO.activity;fillTasks();fillTrx();fillFeed();routePending();}
@@ -756,7 +759,8 @@ else h+='<div class="empty" style="padding:4px 0">Shu oyda CRM toʼlovi yoʼq</d
 return h;}
 function renderTrx(d){var h='';if(!d.trx||!d.trx.length)h='<div class="empty">Tranzaksiya yo&#39;q</div>';
 else d.trx.forEach(function(x){var inc=x.direction==='income';
-h+='<div class="row"><span class="dirg '+(inc?'up':'dn')+'">'+(inc?'▲':'▼')+'</span><div class="grow"><div>'+esc(x.description||x.counterparty||(inc?'Kirim':'Xarajat'))+'</div><div class="sub">'+esc(x.businesses.name)+' · '+x.occurred_at+'</div></div><span class="amt '+(inc?'up':'dn')+'">'+(inc?'+':'−')+fmt(x.amount)+' '+x.currency+'</span></div>';});
+var fc='';if(!inc&&x.fund_id){var fn=(x.funds&&x.funds.name)||'';if(fn)fc='<span class="bm'+(curSlug?' clk':'')+'" style="margin-right:6px"'+(curSlug?' title="Fondni almashtirish" onclick="fundCycle(\''+x.id+'\',\''+x.fund_id+'\')"':'')+'>'+esc(fn)+'</span>';}
+h+='<div class="row"><span class="dirg '+(inc?'up':'dn')+'">'+(inc?'▲':'▼')+'</span><div class="grow"><div>'+esc(x.description||x.counterparty||(inc?'Kirim':'Xarajat'))+'</div><div class="sub">'+esc(x.businesses.name)+' · '+x.occurred_at+'</div></div>'+fc+'<span class="amt '+(inc?'up':'dn')+'">'+(inc?'+':'−')+fmt(x.amount)+' '+x.currency+'</span></div>';});
 pb().innerHTML=h+crmBlock(d.crm);}
 function renderActivity(d){var h='';if(!d.activity||!d.activity.length){pb().innerHTML='<div class="empty">Bo&#39;sh</div>';return;}
 d.activity.forEach(function(a){h+='<div class="row"><div class="grow"><div>'+esc(a.action)+' · '+esc(a.entity)+'</div><div class="sub">'+String(a.created_at).slice(0,16).replace('T',' ')+'</div></div></div>';});
@@ -775,22 +779,42 @@ pb().innerHTML='<div class="f-label" style="margin-top:2px">Vazifalar holati · 
 +'<div class="f-label" style="margin-top:18px">Moliya oqimi · kirim / xarajat</div>'+money
 +crmBlock(crm)
 +'<div class="f-label" style="margin-top:16px">Kelgusi muddatlar</div>'+uh;}
-var _bgCur='UZS',_plKind='expense',_plCur='UZS';
+var _plKind='expense',_plCur='UZS';var FUNDS=[],_fEdit=null;
+function fmtP(p){p=Number(p);return p%1?p.toFixed(1):String(p);}
 function _curChips(sel,fn){var h='';['UZS','USD','KRW'].forEach(function(c){h+='<button class="chip'+(c===sel?' on':'')+'" onclick="'+fn+'(\''+c+'\')">'+c+'</button>';});return h;}
 function _kindChips(sel){var h='';[['income','▲ Kirim'],['expense','▼ Xarajat']].forEach(function(x){h+='<button class="chip'+(x[0]===sel?' on':'')+'" onclick="plKindSet(\''+x[0]+'\')">'+x[1]+'</button>';});return h;}
-function bgCurSet(c){_bgCur=c;el('bgCurCh').innerHTML=_curChips(c,'bgCurSet');}
 function plCurSet(c){_plCur=c;el('plCurCh').innerHTML=_curChips(c,'plCurSet');}
 function plKindSet(k){_plKind=k;el('plKindCh').innerHTML=_kindChips(k);}
-function renderBudget(d){d=d||{};var rows=d.budgets||[];var spent=d.spent||{};var ym=d.ym||new Date().toISOString().slice(0,7);
+function renderFunds(d){d=d||{};var rows=d.funds||[];var alloc=d.alloc||{};var spent=d.spent||{};FUNDS=rows;
 var h='';
-if(!rows.length)h+='<div class="empty">'+ym+' uchun budjet belgilanmagan</div>';
-rows.forEach(function(r,i){var sp=spent[r.business_id+'/'+r.currency]||0;var am=Number(r.amount);var pct=am>0?Math.min(100,sp/am*100):0;var over=sp>am;
-h+='<div class="budget-row" style="animation-delay:'+(i*.05)+'s"><span class="ic">'+esc(r.currency)+'</span><span class="nm">'+esc(curSlug?ym:((r.businesses&&r.businesses.name)||''))+'</span><div class="bar-track"><i class="bar-fill '+(over?'dn-f':'up-f')+'" style="width:'+pct+'%"></i></div><span class="net '+(over?'dn':'up')+'">'+fmt(sp)+' / '+fmt(am)+'</span></div>';});
-if(curSlug){h+='<div class="f-label" style="margin-top:14px">Budjet belgilash · '+ym+'</div><div class="chips seg opts" id="bgCurCh">'+_curChips(_bgCur,'bgCurSet')+'</div><div style="display:flex;gap:8px;margin-top:8px"><input id="bgAmt" type="number" placeholder="Oylik budjet summasi" style="flex:1;min-width:0;margin:0"><button class="btn" style="width:auto;margin:0;padding:0 16px" onclick="budgetSave()">Saqlash</button></div><div class="note" style="margin-top:8px">0 kiritsangiz budjet o‘chiriladi. Xarajat shu oy tranzaksiyalaridan avtomatik hisoblanadi.</div>';}
+if(!rows.length)h+='<div class="empty">Fond mavjud emas</div>';
+rows.forEach(function(f,i){
+var curs={};Object.keys(alloc).concat(Object.keys(spent)).forEach(function(k){var p=k.split('/');if(p[0]===f.id)curs[p[1]]=1;});
+var cl=Object.keys(curs);if(!cl.length)cl=['UZS'];
+cl.forEach(function(c){var a=alloc[f.id+'/'+c]||0,s=spent[f.id+'/'+c]||0,bal=a-s;var pct=a>0?Math.min(100,s/a*100):(s>0?100:0);var over=bal<0;
+h+='<div class="budget-row" style="animation-delay:'+(i*.05)+'s"><span class="ic">'+(f.is_general?'∗':fmtP(f.percent)+'%')+'</span><span class="nm">'+esc(f.name)+' <span class="sub">'+esc(c)+'</span></span><div class="bar-track"><i class="bar-fill '+(over?'dn-f':'up-f')+'" style="width:'+pct+'%"></i></div><span class="net '+(over?'dn':'up')+'" title="ajratildi '+fmt(a)+' / sarflandi '+fmt(s)+'">'+(bal<0?'−':'')+fmt(Math.abs(bal))+'</span>'
++(curSlug&&!f.is_general?'<span class="clk" style="color:var(--st-done);font-weight:700;padding:2px 5px" title="Umumiydan pul o‘tkazish" onclick="fundMove(\''+f.id+'\',\''+c+'\')">⊕</span><span class="clk" style="padding:2px 5px;opacity:.75" title="Tahrirlash" onclick="fundEdit(\''+f.id+'\')">✎</span><span class="clk" style="color:var(--alert);padding:2px 4px" title="O‘chirish" onclick="fundDel(\''+f.id+'\')">✕</span>':'')
++'</div>';});});
+if(curSlug){h+='<div class="f-label" style="margin-top:14px">Fond qo‘shish / tahrirlash</div><div style="display:flex;gap:8px;margin-top:8px"><input id="fName" placeholder="Fond nomi (Oylik, Marketing...)" style="flex:1;min-width:0;margin:0"><input id="fPct" type="number" placeholder="%" style="width:80px;margin:0"><button class="btn" style="width:auto;margin:0;padding:0 16px" onclick="fundSave()">Saqlash</button></div><div class="note" style="margin-top:8px">Har kirim foizlar bo‘yicha fondlarga avtomatik bo‘linadi, qolgani Umumiy (∗) fondga tushadi. Xarajat nomiga mos fonddan yechiladi, topilmasa Umumiydan.</div>'
++'<div class="f-label" style="margin-top:14px">Qo‘lda o‘tkazish · Umumiy → fond</div><input id="fMoveAmt" type="number" placeholder="Summa" style="margin-top:8px"><div class="note" style="margin-top:6px">Summani yozing, so‘ng fond qatoridagi ⊕ ni bosing.</div>';}
 pb().innerHTML=h;}
-function budgetSave(){if(DEMO_ON){toast('Demo rejimda saqlanmaydi');return;}
-var am=Number(el('bgAmt').value);if(el('bgAmt').value===''||isNaN(am)||am<0){toast('Summani yozing');return;}
-api('budget_set',{slug:curSlug,currency:_bgCur,amount:am}).then(function(r){if(r.ok){toast(am>0?'✓ Budjet saqlandi':'✓ Budjet o‘chirildi');loadTab('budget');}else toast('Xatolik');}).catch(function(){toast('Xatolik');});}
+function fundEdit(id){var f=FUNDS.find(function(x){return x.id===id;});if(!f)return;_fEdit=id;el('fName').value=f.name;el('fPct').value=Number(f.percent);toast('Tahrir: '+f.name);}
+function fundDel(id){if(DEMO_ON){toast('Demo rejimda saqlanmaydi');return;}
+api('fund_set',{id:id,percent:-1}).then(function(r){if(r.ok){toast('✓ Fond o‘chirildi');_fEdit=null;loadTab('budget');}else toast('Xatolik');}).catch(function(){toast('Xatolik');});}
+function fundSave(){if(DEMO_ON){toast('Demo rejimda saqlanmaydi');return;}
+var nm=el('fName').value.trim();var pc=Number(el('fPct').value||0);
+if(!_fEdit&&!nm){toast('Nomini yozing');return;}
+if(isNaN(pc)||pc<0||pc>100){toast('Foiz 0–100 oralig‘ida');return;}
+var p=_fEdit?api('fund_set',{id:_fEdit,name:nm||undefined,percent:pc}):api('fund_add',{slug:curSlug,name:nm,percent:pc});
+p.then(function(r){if(r.ok){toast('✓ Saqlandi');_fEdit=null;loadTab('budget');}else toast(String(r.error||'').indexOf('percent')>-1?'Foizlar yig‘indisi 100 dan oshib ketdi':'Xatolik');}).catch(function(){toast('Xatolik');});}
+function fundMove(id,cur){if(DEMO_ON){toast('Demo rejimda saqlanmaydi');return;}
+var am=Number(el('fMoveAmt')&&el('fMoveAmt').value);if(!am||am<=0){toast('Avval summani yozing');return;}
+var f=FUNDS.find(function(x){return x.id===id;});if(!f)return;
+var g=FUNDS.find(function(x){return x.is_general&&x.business_id===f.business_id;});
+api('fund_move',{to_id:id,from_id:g?g.id:null,amount:am,currency:cur}).then(function(r){if(r.ok){toast('✓ '+f.name+' fondiga o‘tkazildi');loadTab('budget');}else toast('Xatolik');}).catch(function(){toast('Xatolik');});}
+function fundCycle(tid,fid){if(DEMO_ON){toast('Demo rejimda saqlanmaydi');return;}
+if(!FUNDS.length)return;var i=-1;FUNDS.forEach(function(f,ix){if(f.id===fid)i=ix;});var nx=FUNDS[(i+1)%FUNDS.length];
+api('fund_assign',{trx_id:tid,fund_id:nx.id}).then(function(r){if(r.ok){toast('→ '+nx.name);loadTab('money');}else toast('Xatolik');}).catch(function(){toast('Xatolik');});}
 function renderPlan(tasks,plan){plan=plan||[];
 var upc=tasks.filter(function(t){return t.due_at&&t.status!=='done'&&t.status!=='cancelled';}).sort(function(a,b){return String(a.due_at).localeCompare(String(b.due_at));});
 var uh='';upc.slice(0,6).forEach(function(t){uh+='<div class="row"><div class="grow"><div>'+esc(t.title)+'</div><div class="sub">'+esc(t.businesses.name)+' · '+String(t.due_at).slice(0,10)+'</div></div>'+dueChip(t)+'</div>';});
@@ -811,10 +835,10 @@ api('plan_add',{slug:curSlug,kind:_plKind,title:ti,amount:am,currency:_plCur,due
 function tabFail(){pb().innerHTML='<div class="empty">Yuklab bo&#39;lmadi</div>';}
 function loadTab(tab){var _m={tasks:'bpTasks',money:'bpMoney',budget:'bpBudget',plan:'bpPlan',stats:'bpAnaliz',act:'bpAct'};var target=el(_m[tab])?_m[tab]:'pBody';PBODY=target;pb().innerHTML='<div class="empty">Yuklanmoqda...</div>';
 function T(fn){return function(x){PBODY=target;fn(x);};}
-if(DEMO_ON){if(tab==='tasks')renderTasks(demoTab('tasks'));else if(tab==='money')renderTrx(demoTab('money'));else if(tab==='budget')renderBudget(demoTab('budget'));else if(tab==='stats')renderStats(demoTab('tasks').tasks,demoTab('money').trx,null);else if(tab==='plan')renderPlan(demoTab('tasks').tasks,demoTab('plan').plan);else renderActivity(demoTab('act'));return;}
+if(DEMO_ON){if(tab==='tasks')renderTasks(demoTab('tasks'));else if(tab==='money'){FUNDS=DEMO.funds.filter(function(r){return !curSlug||r.businesses.slug===curSlug;});renderTrx(demoTab('money'));}else if(tab==='budget')renderFunds(demoTab('budget'));else if(tab==='stats')renderStats(demoTab('tasks').tasks,demoTab('money').trx,null);else if(tab==='plan')renderPlan(demoTab('tasks').tasks,demoTab('plan').plan);else renderActivity(demoTab('act'));return;}
 if(tab==='tasks')api('tasks',curSlug?{slug:curSlug}:{}).then(T(renderTasks)).catch(T(tabFail));
-else if(tab==='money')api('trx',curSlug?{slug:curSlug}:{}).then(T(renderTrx)).catch(T(tabFail));
-else if(tab==='budget')api('budget',curSlug?{slug:curSlug}:{}).then(T(renderBudget)).catch(T(tabFail));
+else if(tab==='money')Promise.all([api('trx',curSlug?{slug:curSlug}:{}),curSlug?api('funds',{slug:curSlug}):Promise.resolve({funds:[]})]).then(T(function(r){FUNDS=r[1].funds||[];renderTrx(r[0]);})).catch(T(tabFail));
+else if(tab==='budget')api('funds',curSlug?{slug:curSlug}:{}).then(T(renderFunds)).catch(T(tabFail));
 else if(tab==='plan')Promise.all([api('tasks',curSlug?{slug:curSlug}:{}),api('plan',curSlug?{slug:curSlug}:{})]).then(T(function(r){renderPlan(r[0].tasks||[],r[1].plan||[]);})).catch(T(tabFail));
 else if(tab==='stats')Promise.all([api('tasks',curSlug?{slug:curSlug}:{}),api('trx',curSlug?{slug:curSlug}:{})]).then(T(function(r){renderStats(r[0].tasks||[],r[1].trx||[],r[1].crm||null);})).catch(T(tabFail));
 else api('activity').then(T(renderActivity)).catch(T(tabFail));}
