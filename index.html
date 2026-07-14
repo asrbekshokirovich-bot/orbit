@@ -449,7 +449,7 @@ body[data-theme=studio] .bcount,body[data-theme=studio] .badge{box-shadow:none}
 <div class="win-body">
 <div class="f-label">Turi</div><div class="chips seg opts" id="mKind"></div>
 <div class="f-label">Biznes</div><div class="chips opts" id="mBiz"></div>
-<div id="mTask"><div class="f-label">Vazifa</div><input id="tTitle" placeholder="Vazifa nomi..."><input id="tDue" type="date"></div>
+<div id="mTask"><div class="f-label">Vazifa</div><input id="tTitle" placeholder="Vazifa nomi..."><input id="tDue" type="date"><div id="mAsgWrap" class="hidden"><div class="f-label">Mas'ul</div><div class="chips opts" id="mAsg"></div></div></div>
 <div id="mTrx" class="hidden"><div class="f-label">Yo'nalish</div><div class="chips seg opts" id="mDir"></div><div class="f-label">Summa</div><input id="xAmt" type="number" placeholder="Summa"><div class="chips seg opts" id="mCur"></div><input id="xDesc" placeholder="Izoh / kontragent..."></div>
 </div>
 <button class="btn" onclick="submitModal()">Saqlash</button>
@@ -464,7 +464,7 @@ body[data-theme=studio] .bcount,body[data-theme=studio] .badge{box-shadow:none}
 <script>
 /* ================= WORKING LOGIC — do not change contracts ================= */
 var FN='https://zqpglkxbtpkvyraxquao.supabase.co/functions/v1/dashboard';
-var KEY=null,BIZ=[],OV=null,curSlug=null,mState={kind:'task',biz:null,dir:'expense',cur:'UZS'};
+var KEY=null,BIZ=[],OV=null,curSlug=null,MEMBERS={},mState={kind:'task',biz:null,dir:'expense',cur:'UZS',assignee:null};
 var ALL={tasks:null,trx:null,act:null};
 var COLORS={hanguk:['#2f4a6b','#1a2c42'],skillhub:['#7a2f2b','#4a1a17'],personal:['#a8742f','#6b4a1c']};
 var PALETTE=[['#3f6b2e','#24421a'],['#6b3f6b','#3f2440'],['#8a6d3b','#54401e'],['#555049','#332e28'],['#7a5230','#4a3118']];
@@ -576,6 +576,7 @@ function boot(){api('overview').then(function(d){DEMO_ON=false;el('demo').classL
 api('tasks',{}).then(function(r){ALL.tasks=r.tasks||[];fillTasks();}).catch(function(){});
 api('trx',{}).then(function(r){ALL.trx=r.trx||[];fillTrx();}).catch(function(){});
 api('activity').then(function(r){ALL.act=r.activity||[];fillFeed();}).catch(function(){});
+api('members').then(function(r){buildMembers(r.members||[]);}).catch(function(){});
 routePending();
 }).catch(function(e){if(e&&e.message==='key')return;if(!OV){DEMO_ON=true;el('demo').classList.remove('hidden');el('sysStat').classList.add('hidden');el('annGo').className='ann';el('annCaut').className='ann lit-caut';demoRefresh();}});}
 
@@ -872,7 +873,7 @@ else api('activity').then(T(renderActivity)).catch(T(tabFail));}
 function cycle(id,cur){var next=cur==='open'?'in_progress':cur==='in_progress'?'done':'open';
 if(DEMO_ON){var t=DEMO.tasks.find(function(x){return x.id===id;});if(t)t.status=next;toast('✓ '+SNAME[next]);if(!el('bizpage').classList.contains('hidden'))loadTab('tasks');demoRefresh();return;}
 api('task_set_status',{id:id,status:next}).then(function(){toast('✓ '+SNAME[next]);if(!el('bizpage').classList.contains('hidden'))loadTab('tasks');boot();});}
-function openModal(){mState={kind:'task',biz:(curSlug&&!el('bizpage').classList.contains('hidden'))?curSlug:(BIZ[0]?BIZ[0].slug:null),dir:'expense',cur:'UZS'};drawModal();el('modal').classList.remove('hidden');}
+function openModal(){mState={kind:'task',biz:(curSlug&&!el('bizpage').classList.contains('hidden'))?curSlug:(BIZ[0]?BIZ[0].slug:null),dir:'expense',cur:'UZS',assignee:null};drawModal();el('modal').classList.remove('hidden');}
 function closeModal(){el('modal').classList.add('hidden');}
 var TASKMAP={};
 function openTask(id){var t=TASKMAP[id];if(!t)return;var col=SSTAT[t.status]||'#888';
@@ -898,17 +899,20 @@ function closeTask(){el('tview').classList.add('hidden');}
 function tvStatus(id,st){var t=TASKMAP[id];if(!t||t.status===st)return;
 if(DEMO_ON){var d2=DEMO.tasks.find(function(x){return x.id===id;});if(d2)d2.status=st;t.status=st;toast('✓ '+SNAME[st]);openTask(id);if(!el('bizpage').classList.contains('hidden'))loadTab('tasks');demoRefresh();return;}
 api('task_set_status',{id:id,status:st}).then(function(){t.status=st;toast('✓ '+SNAME[st]);openTask(id);if(!el('bizpage').classList.contains('hidden'))loadTab('tasks');boot();}).catch(function(){toast('Xatolik');});}
+function buildMembers(list){MEMBERS={};(list||[]).forEach(function(m){(MEMBERS[m.business_id]=MEMBERS[m.business_id]||[]).push(m);});if(el('modal')&&!el('modal').classList.contains('hidden'))drawModal();}
 function drawModal(){var kk=[['task','<i class="tcode">TSK</i>Vazifa'],['trx','<i class="tcode">FIN</i>Tranzaksiya']];var h='';
 kk.forEach(function(k){h+='<button class="chip'+(mState.kind===k[0]?' on':'')+'" onclick="mSet(&#39;kind&#39;,&#39;'+k[0]+'&#39;)">'+k[1]+'</button>';});el('mKind').innerHTML=h;
 h='';BIZ.forEach(function(b){h+='<button class="chip'+(mState.biz===b.slug?' on':'')+'" onclick="mSet(&#39;biz&#39;,&#39;'+b.slug+'&#39;)">'+esc(b.name)+'</button>';});el('mBiz').innerHTML=h;
 h='';[['income','<b style="color:var(--up)">▲</b> Kirim'],['expense','<b style="color:var(--dn)">▼</b> Xarajat']].forEach(function(x){h+='<button class="chip'+(mState.dir===x[0]?' on':'')+'" onclick="mSet(&#39;dir&#39;,&#39;'+x[0]+'&#39;)">'+x[1]+'</button>';});el('mDir').innerHTML=h;
 h='';['UZS','USD','KRW'].forEach(function(x){h+='<button class="chip'+(mState.cur===x?' on':'')+'" onclick="mSet(&#39;cur&#39;,&#39;'+x+'&#39;)">'+x+'</button>';});el('mCur').innerHTML=h;
+var _bz=BIZ.find(function(x){return x.slug===mState.biz;});var _mm=(_bz&&MEMBERS[_bz.id])?MEMBERS[_bz.id]:[];
+if(_mm.length){el('mAsgWrap').classList.remove('hidden');var ah='<button class="chip'+(!mState.assignee?' on':'')+'" onclick="mSet(&#39;assignee&#39;,null)">— Belgilanmagan</button>';_mm.forEach(function(p){ah+='<button class="chip'+(mState.assignee===p.id?' on':'')+'" onclick="mSet(&#39;assignee&#39;,&#39;'+p.id+'&#39;)">'+esc(p.full_name)+(p.is_super_owner?' ★':'')+'</button>';});el('mAsg').innerHTML=ah;}else{el('mAsgWrap').classList.add('hidden');}
 el('mTask').classList.toggle('hidden',mState.kind!=='task');el('mTrx').classList.toggle('hidden',mState.kind!=='trx');}
-function mSet(k,v){mState[k]=v;drawModal();}
+function mSet(k,v){mState[k]=v;if(k==='biz')mState.assignee=null;drawModal();}
 function submitModal(){if(!mState.biz){toast('Biznes tanlang');return;}
 if(mState.kind==='task'){var ti=el('tTitle').value.trim();if(!ti){toast('Nomini yozing');return;}
 if(DEMO_ON){var bz=BIZ.find(function(b){return b.slug===mState.biz;});DEMO.tasks.unshift({id:'t'+Date.now(),status:'open',title:ti,due_at:el('tDue').value||null,businesses:{name:bz?bz.name:''},business_id:bz?bz.id:'',assignee_hint:null});toast('✓ Vazifa saqlandi');el('tTitle').value='';el('tDue').value='';closeModal();demoRefresh();return;}
-api('task_add',{slug:mState.biz,title:ti,due:el('tDue').value||null}).then(function(r){if(r.ok){toast('✓ Vazifa saqlandi');el('tTitle').value='';el('tDue').value='';closeModal();boot();}else toast('Xatolik');});}
+api('task_add',{slug:mState.biz,title:ti,due:el('tDue').value||null,assignee:mState.assignee||null}).then(function(r){if(r.ok){toast('✓ Vazifa saqlandi');el('tTitle').value='';el('tDue').value='';mState.assignee=null;closeModal();boot();}else toast('Xatolik');});}
 else{var am=Number(el('xAmt').value);if(!am||am<=0){toast('Summani yozing');return;}
 if(DEMO_ON){var bz2=BIZ.find(function(b){return b.slug===mState.biz;});DEMO.trx.unshift({id:'x'+Date.now(),direction:mState.dir,amount:am,currency:mState.cur,description:el('xDesc').value.trim()||null,counterparty:null,businesses:{name:bz2?bz2.name:''},business_id:bz2?bz2.id:'',occurred_at:new Date().toISOString().slice(0,10)});toast('✓ Saqlandi');el('xAmt').value='';el('xDesc').value='';closeModal();demoRefresh();return;}
 api('trx_add',{slug:mState.biz,direction:mState.dir,amount:am,currency:mState.cur,description:el('xDesc').value.trim()||null}).then(function(r){if(r.ok){toast('✓ Saqlandi');el('xAmt').value='';el('xDesc').value='';closeModal();boot();}else toast('Xatolik');});}}
