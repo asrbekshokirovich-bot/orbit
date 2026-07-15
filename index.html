@@ -745,9 +745,9 @@ if(AI.voice>=2){AI.recBufs=AI.pre.slice();AI.recLen=0;for(var j=0;j<AI.recBufs.l
 if(rms<stopTh)AI.silence+=dt;else AI.silence=0;
 var secs=AI.recLen/AI.rate;if((AI.silence>=1100&&secs>0.4)||secs>30)aiEndUtterance();
 }else if(AI.state==='think'){if(rms>bargeTh)AI.barge++;else AI.barge=0;
-if(AI.barge>=6)aiBarge(d,n);
-}else if(AI.state==='talk'){if(rms>bargeTh)AI.barge++;else AI.barge=0;
-if(AI.barge>=3)aiBarge(d,n);}}
+if(AI.barge>=12)aiBarge(d,n);
+}else if(AI.state==='talk'){if(rms>bargeTh+AI.spk*0.5)AI.barge++;else AI.barge=0;
+if(AI.barge>=10)aiBarge(d,n);}}
 function aiEndUtterance(){var bufs=AI.recBufs,len=AI.recLen,rate=AI.rate;AI.recBufs=[];AI.recLen=0;AI.pre=[];
 AIBUSY=true;aiStopStream();aiSetState('think');
 var b64=wavB64(bufs,len,rate);AI.lastB64=b64;
@@ -785,7 +785,7 @@ function aiStopStream(){try{if(AI.streamAbort)AI.streamAbort.abort();}catch(e){}
 /* --- audio queue: first sentence plays while later sentences are still being generated --- */
 function aiEnqueueTTS(b64){if(!b64)return;AI.q.push(b64);if(!AI.qPlaying)aiPlayNext();}
 function aiPlayNext(){if(!AI.run||!AI.actx){AI.qPlaying=false;return;}
-if(!AI.q.length){AI.qPlaying=false;if(AI.streamDone)aiResume();return;}
+if(!AI.q.length){AI.qPlaying=false;if(AI.streamDone)aiResume();else aiSetState('think');return;}
 AI.qPlaying=true;var b64=AI.q.shift();
 try{var bin=atob(b64),m=bin.length,ab=new ArrayBuffer(m),u=new Uint8Array(ab);for(var i=0;i<m;i++)u[i]=bin.charCodeAt(i);
 AI.actx.decodeAudioData(ab,function(buf){if(!AI.run){AI.qPlaying=false;return;}
