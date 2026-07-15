@@ -300,6 +300,23 @@ body[data-theme=ledger] .bpt{font-family:'Caveat',cursive;font-size:17px;letter-
 #bpgrid>.panel{display:none;min-height:calc(100vh - var(--cbarH,48px) - 220px)}
 #bpgrid>.panel.act{display:flex;animation:floatin .4s var(--ease-float)}
 #bpgrid .panel-b{max-height:none}
+.kb{display:flex;gap:10px;align-items:flex-start;overflow-x:auto;padding:2px 0 6px;scrollbar-width:thin}
+.kb::-webkit-scrollbar{height:6px}
+.kb::-webkit-scrollbar-thumb{background:var(--acc-line,#2a3a4a);border-radius:3px}
+.kbcol{flex:1 1 0;min-width:186px;background:rgba(255,255,255,.02);border:1px solid var(--acc-line,#22303f);border-radius:12px;display:flex;flex-direction:column;transition:background .15s,box-shadow .15s}
+.kbcol.over{background:rgba(90,160,240,.09);box-shadow:0 0 0 1px var(--core,#5aa0f0) inset}
+.kbcol-h{display:flex;align-items:center;gap:7px;padding:9px 12px;font-size:11px;letter-spacing:.07em;text-transform:uppercase;font-weight:700;border-bottom:1px solid var(--acc-line,#22303f)}
+.kbcol-h .n{margin-left:auto;font-size:11px;opacity:.65;background:rgba(255,255,255,.07);padding:1px 8px;border-radius:9px}
+.kbcol-b{padding:8px;display:flex;flex-direction:column;gap:7px;min-height:56px;flex:1}
+.kbcard{background:rgba(12,18,26,.55);border:1px solid var(--acc-line,#22303f);border-left:3px solid var(--c,#888);border-radius:9px;padding:9px 10px;cursor:grab;transition:transform .1s,box-shadow .15s,opacity .12s}
+.kbcard:hover{box-shadow:0 5px 16px rgba(0,0,0,.35);transform:translateY(-1px)}
+.kbcard:active{cursor:grabbing}
+.kbcard.drag{opacity:.35}
+.kbcard .t{font-size:13px;line-height:1.35;margin-bottom:5px}
+.kbcard .m{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.kbmt{font-size:14px;opacity:.28;text-align:center;padding:12px 4px}
+.kbcanc{margin-top:14px}
+@media(max-width:640px){.kbcol{min-width:150px}.kbcard .t{font-size:12.5px}}
 .clk{cursor:pointer;-webkit-tap-highlight-color:transparent}
 
 /* AI */
@@ -793,9 +810,43 @@ else el('bizpage').classList.add('hidden');}
 function routePending(){if(location.hash.indexOf('#biz/')===0&&(PENDING||el('bizpage').classList.contains('hidden'))){PENDING=false;route();}}
 addEventListener('hashchange',route);
 function setTab(btn){var bs=el('pTabs').children;for(var i=0;i<bs.length;i++)bs[i].classList.remove('on');btn.classList.add('on');loadTab(btn.getAttribute('data-tab'));}
-function renderTasks(d){var h='';if(!d.tasks||!d.tasks.length){pb().innerHTML='<div class="empty">Ochiq vazifa yo&#39;q</div>';return;}
-d.tasks.forEach(function(t){h+=taskRow(t,true);});
-pb().innerHTML=h;}
+var KBTASKS=[],KBHOST=null,KBID=null;
+function renderTasks(d){KBHOST=pb();KBTASKS=(d.tasks||[]).slice();renderKanban();}
+function renderKanban(){var host=KBHOST||el('bpTasks')||pb();if(!host)return;
+var byst={open:[],in_progress:[],done:[],cancelled:[]};
+KBTASKS.forEach(function(t){TASKMAP[t.id]=t;(byst[t.status]||(byst[t.status]=[])).push(t);});
+var h='<div class="kb">';
+['open','in_progress','done'].forEach(function(st){var col=SSTAT[st]||'#888';var arr=byst[st]||[];
+h+='<div class="kbcol" ondragover="kbOver(event,this)" ondragleave="kbLeave(event,this)" ondrop="kbDrop(event,&#39;'+st+'&#39;,this)">'
++'<div class="kbcol-h"><span class="sdot" style="color:'+col+'"></span>'+SNAME[st]+'<span class="n">'+arr.length+'</span></div>'
++'<div class="kbcol-b">';
+if(!arr.length)h+='<div class="kbmt">—</div>';
+arr.forEach(function(t){h+=kbCard(t,col);});
+h+='</div></div>';});
+h+='</div>';
+var canc=byst.cancelled||[];
+if(canc.length){h+='<div class="kbcanc"><div class="f-label">Bekor qilingan · '+canc.length+'</div>';canc.forEach(function(t){h+=taskRow(t,true);});h+='</div>';}
+host.innerHTML=h;}
+function kbCard(t,col){var due=t.due_at?String(t.due_at).slice(0,10):'';var meta=dueChip(t);
+if(!curSlug&&t.businesses&&t.businesses.name)meta+='<span class="sub">'+esc(t.businesses.name)+'</span>';
+if(due&&(t.status==='open'||t.status==='in_progress'))meta+='<span class="sub">'+due+'</span>';
+if(t.assignee_hint)meta+='<span class="sub">· '+esc(t.assignee_hint)+'</span>';
+return '<div class="kbcard" draggable="true" style="--c:'+col+'" ondragstart="kbDrag(event,&#39;'+t.id+'&#39;)" ondragend="kbEnd(event)" onclick="openTask(&#39;'+t.id+'&#39;)">'
++'<div class="t">'+esc(t.title)+'</div>'+(meta?'<div class="m">'+meta+'</div>':'')+'</div>';}
+function kbDrag(e,id){KBID=id;try{e.dataTransfer.setData('text/plain',id);e.dataTransfer.effectAllowed='move';}catch(_){}
+var c=e.target&&e.target.closest?e.target.closest('.kbcard'):null;if(c)setTimeout(function(){c.classList.add('drag');},0);}
+function kbEnd(e){var c=e.target&&e.target.closest?e.target.closest('.kbcard'):null;if(c)c.classList.remove('drag');
+var ov=document.querySelectorAll('.kbcol.over');for(var i=0;i<ov.length;i++)ov[i].classList.remove('over');}
+function kbOver(e,col){e.preventDefault();try{e.dataTransfer.dropEffect='move';}catch(_){}if(col)col.classList.add('over');}
+function kbLeave(e,col){if(col&&(!e.relatedTarget||!col.contains(e.relatedTarget)))col.classList.remove('over');}
+function kbDrop(e,st,col){e.preventDefault();if(col)col.classList.remove('over');
+var id=KBID;try{var dt=e.dataTransfer.getData('text/plain');if(dt)id=dt;}catch(_){}KBID=null;
+if(!id)return;var t=TASKMAP[id];if(!t||t.status===st)return;kbSet(id,st);}
+function kbSet(id,st){var t=TASKMAP[id];if(!t)return;var old=t.status;t.status=st;
+for(var i=0;i<KBTASKS.length;i++)if(KBTASKS[i].id===id){KBTASKS[i].status=st;break;}
+renderKanban();
+if(DEMO_ON){var d2=DEMO.tasks.find(function(x){return x.id===id;});if(d2)d2.status=st;toast('✓ '+SNAME[st]);demoRefresh();return;}
+api('task_set_status',{id:id,status:st}).then(function(){toast('✓ '+SNAME[st]);boot();}).catch(function(){t.status=old;for(var j=0;j<KBTASKS.length;j++)if(KBTASKS[j].id===id){KBTASKS[j].status=old;break;}renderKanban();toast('Xatolik');});}
 function crmBlock(crm){if(!crm)return'';
 var h='<div class="f-label" style="margin-top:16px">Hanguk CRM · toʼlovlar (kirim)</div>';
 var ks=Object.keys(crm.month||{});
