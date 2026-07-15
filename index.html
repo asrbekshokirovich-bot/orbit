@@ -736,25 +736,25 @@ function aiMsg(who,txt){var out=el('aiOut');var d=document.createElement('div');
 function aiAudio(e){if(!AI.run)return;var d=e.inputBuffer.getChannelData(0),n=d.length,s=0;
 for(var i=0;i<n;i++){var v=d[i];s+=v*v;}var rms=Math.sqrt(s/n);AI.micRaw=rms;
 if(AI.state==='listen'&&rms<AI.nf*2+0.006)AI.nf=AI.nf*0.97+rms*0.03;if(AI.nf<0.003)AI.nf=0.003;
-var startTh=Math.max(0.05,AI.nf*4.5),stopTh=Math.max(0.028,AI.nf*2.6),bargeTh=Math.max(0.1,AI.nf*7);
+var startTh=Math.max(0.05,AI.nf*4.5),stopTh=Math.max(0.024,AI.nf*2.4),bargeTh=Math.max(0.1,AI.nf*7);
 var dt=n/AI.rate*1000;
 if(AI.state==='listen'){AI.pre.push(new Float32Array(d));if(AI.pre.length>AI.preMax)AI.pre.shift();
 if(rms>startTh)AI.voice++;else AI.voice=0;
 if(AI.voice>=2){AI.recBufs=AI.pre.slice();AI.recLen=0;for(var j=0;j<AI.recBufs.length;j++)AI.recLen+=AI.recBufs[j].length;AI.silence=0;AI.voice=0;aiSetState('rec');}
 }else if(AI.state==='rec'){AI.recBufs.push(new Float32Array(d));AI.recLen+=n;
 if(rms<stopTh)AI.silence+=dt;else AI.silence=0;
-var secs=AI.recLen/AI.rate;if((AI.silence>=800&&secs>0.35)||secs>30)aiEndUtterance();
+var secs=AI.recLen/AI.rate;if((AI.silence>=1000&&secs>0.4)||secs>30)aiEndUtterance();
 }else if(AI.state==='talk'){if(rms>bargeTh)AI.barge++;else AI.barge=0;
-if(AI.barge>=4){AI.barge=0;aiStopTTS();AI.recBufs=[new Float32Array(d)];AI.recLen=n;AI.silence=0;aiSetState('rec');}}}
+if(AI.barge>=3){AI.barge=0;aiStopTTS();AI.recBufs=[new Float32Array(d)];AI.recLen=n;AI.silence=0;aiSetState('rec');}}}
 function aiEndUtterance(){var bufs=AI.recBufs,len=AI.recLen,rate=AI.rate;AI.recBufs=[];AI.recLen=0;AI.pre=[];
 AIBUSY=true;aiSetState('think');
 var b64=wavB64(bufs,len,rate);
 api('ai_stt',{audio:b64,mime:'audio/wav'}).then(function(r){
 if(!r.text||!r.text.trim()){aiResume();return;}
-aiMsg('SIZ',r.text);return aiAsk(r.text);
+return aiAsk(r.text);
 }).catch(function(e){if(String(e.message)!=='key')toast('Tushunolmadim');aiResume();});}
 function aiAsk(q){return api('ai_ask',{question:q}).then(function(r){
-if(r.answer){aiMsg('ORBIT',r.answer);if(r.tts)aiPlayTTS(r.tts);else aiResume();}
+if(r.answer){if(r.tts)aiPlayTTS(r.tts);else aiResume();}
 else{toast('Xatolik');aiResume();}
 }).catch(function(e){if(String(e.message)!=='key')toast('Xatolik');aiResume();});}
 /* --- play TTS through analyser so the avatar mouth mimics AI speech --- */
