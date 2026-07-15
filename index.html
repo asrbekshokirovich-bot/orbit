@@ -664,7 +664,7 @@ ac.slice(0,7).forEach(function(a){h+='<div class="row"><div class="grow"><div>'+
 el('feed').innerHTML=h||'<div class="empty">Bo\u2018sh</div>';}
 
 /* ================= AI yadro — ovoz toʻlqini ================= */
-var AI={run:false,stream:null,actx:null,proc:null,micSrc:null,ttsAn:null,ttsData:null,ttsSrc:null,state:'idle',mic:0,micRaw:0,spk:0,nf:0.006,recBufs:[],recLen:0,pre:[],preMax:6,silence:0,voice:0,barge:0,rate:0,gx:0,gxT:0,nextGaze:0,nextBlink:0,blinkUntil:0,jump:0,cool:0,w:{aura:['#ff7a5c','#a78bfa','#38e0f8','#4ade80'],body:'#071426',eye:'#ffffff',glow:1,add:1}};
+var AI={run:false,stream:null,actx:null,proc:null,micSrc:null,ttsAn:null,ttsData:null,ttsSrc:null,q:[],qPlaying:false,streamDone:false,gotAudio:false,gotEvt:false,streamAbort:null,lastB64:'',state:'idle',mic:0,micRaw:0,spk:0,nf:0.006,recBufs:[],recLen:0,pre:[],preMax:6,silence:0,voice:0,barge:0,rate:0,gx:0,gxT:0,nextGaze:0,nextBlink:0,blinkUntil:0,jump:0,cool:0,w:{aura:['#ff7a5c','#a78bfa','#38e0f8','#4ade80'],body:'#071426',eye:'#ffffff',glow:1,add:1}};
 function aiWaveStyle(){var T=THEMES[document.body.getAttribute('data-theme')];if(T&&T.bot)AI.w=T.bot;}
 function aiSizeCv(){var c=el('aicv');if(!c)return;c.width=innerWidth*DPR;c.height=innerHeight*DPR;c.style.width=innerWidth+'px';c.style.height=innerHeight+'px';}
 addEventListener('resize',function(){if(el('aipage')&&!el('aipage').classList.contains('hidden'))aiSizeCv();});
@@ -743,32 +743,67 @@ if(rms>startTh)AI.voice++;else AI.voice=0;
 if(AI.voice>=2){AI.recBufs=AI.pre.slice();AI.recLen=0;for(var j=0;j<AI.recBufs.length;j++)AI.recLen+=AI.recBufs[j].length;AI.silence=0;AI.voice=0;aiSetState('rec');}
 }else if(AI.state==='rec'){AI.recBufs.push(new Float32Array(d));AI.recLen+=n;
 if(rms<stopTh)AI.silence+=dt;else AI.silence=0;
-var secs=AI.recLen/AI.rate;if((AI.silence>=1000&&secs>0.4)||secs>30)aiEndUtterance();
+var secs=AI.recLen/AI.rate;if((AI.silence>=1100&&secs>0.4)||secs>30)aiEndUtterance();
+}else if(AI.state==='think'){if(rms>bargeTh)AI.barge++;else AI.barge=0;
+if(AI.barge>=6)aiBarge(d,n);
 }else if(AI.state==='talk'){if(rms>bargeTh)AI.barge++;else AI.barge=0;
-if(AI.barge>=3){AI.barge=0;aiStopTTS();AI.recBufs=[new Float32Array(d)];AI.recLen=n;AI.silence=0;aiSetState('rec');}}}
+if(AI.barge>=3)aiBarge(d,n);}}
 function aiEndUtterance(){var bufs=AI.recBufs,len=AI.recLen,rate=AI.rate;AI.recBufs=[];AI.recLen=0;AI.pre=[];
-AIBUSY=true;aiSetState('think');
-var b64=wavB64(bufs,len,rate);
-api('ai_stt',{audio:b64,mime:'audio/wav'}).then(function(r){
-if(!r.text||!r.text.trim()){aiResume();return;}
-return aiAsk(r.text);
-}).catch(function(e){if(String(e.message)!=='key')toast('Tushunolmadim');aiResume();});}
-function aiAsk(q){return api('ai_ask',{question:q}).then(function(r){
-if(r.answer){if(r.tts)aiPlayTTS(r.tts);else aiResume();}
-else{toast('Xatolik');aiResume();}
-}).catch(function(e){if(String(e.message)!=='key')toast('Xatolik');aiResume();});}
-/* --- play TTS through analyser so the avatar mouth mimics AI speech --- */
-function aiPlayTTS(b64){if(!AI.actx){aiResume();return;}
+AIBUSY=true;aiStopStream();aiSetState('think');
+var b64=wavB64(bufs,len,rate);AI.lastB64=b64;
+aiStreamVoice(b64);}
+/* --- barge-in: user speaks while AI is thinking/talking -> stop everything, re-record --- */
+function aiBarge(d,n){aiStopStream();aiStopTTS();AI.barge=0;AI.voice=0;AI.recBufs=[new Float32Array(d)];AI.recLen=n;AI.silence=0;aiSetState('rec');}
+/* --- streamed voice: single request, STT -> token-stream LLM -> per-sentence TTS over SSE --- */
+function aiStreamVoice(b64){if(!AI.actx){aiResume();return;}
+aiStopStream();AI.streamDone=false;AI.gotAudio=false;AI.gotEvt=false;
+try{if(AI.ttsAn)AI.ttsAn.disconnect();}catch(e){}
+try{if(AI.ttsAn)AI.ttsAn.connect(AI.actx.destination);}catch(e){}
+var ac=new AbortController();AI.streamAbort=ac;
+fetch(FN,{method:'POST',headers:{'content-type':'application/json','x-orbit-key':KEY||''},body:JSON.stringify({op:'ai_voice',audio:b64,mime:'audio/wav'}),signal:ac.signal}).then(function(r){
+if(r.status===401){el('gate').classList.remove('hidden');throw new Error('key');}
+if(!r.ok||!r.body)throw new Error('http'+r.status);
+var reader=r.body.getReader(),dec=new TextDecoder(),sb='';
+function pump(){return reader.read().then(function(res){
+if(res.done){aiStreamEnd();return;}
+sb+=dec.decode(res.value,{stream:true});var idx;
+while((idx=sb.indexOf('\n\n'))>=0){var chunk=sb.slice(0,idx).trim();sb=sb.slice(idx+2);
+if(chunk.indexOf('data:')!==0)continue;var pl=chunk.slice(5).trim();if(!pl)continue;
+try{aiOnEvent(JSON.parse(pl));}catch(e){}}
+return pump();});}
+return pump();
+}).catch(function(e){if(e&&e.name==='AbortError')return;
+if(String(e.message)==='key'){aiResume();return;}
+if(!AI.gotEvt){aiFallback(b64);return;}aiStreamEnd();});}
+function aiOnEvent(ev){if(!ev||!ev.type)return;AI.gotEvt=true;
+switch(ev.type){
+case 'audio':AI.gotAudio=true;aiEnqueueTTS(ev.b64);break;
+case 'empty':case 'error':case 'done':AI.streamDone=true;if(!AI.qPlaying&&!AI.q.length)aiResume();break;
+}}
+function aiStreamEnd(){AI.streamDone=true;AI.streamAbort=null;if(!AI.qPlaying&&!AI.q.length)aiResume();}
+function aiStopStream(){try{if(AI.streamAbort)AI.streamAbort.abort();}catch(e){}AI.streamAbort=null;AI.q=[];AI.qPlaying=false;AI.streamDone=false;AI.gotAudio=false;AI.gotEvt=false;}
+/* --- audio queue: first sentence plays while later sentences are still being generated --- */
+function aiEnqueueTTS(b64){if(!b64)return;AI.q.push(b64);if(!AI.qPlaying)aiPlayNext();}
+function aiPlayNext(){if(!AI.run||!AI.actx){AI.qPlaying=false;return;}
+if(!AI.q.length){AI.qPlaying=false;if(AI.streamDone)aiResume();return;}
+AI.qPlaying=true;var b64=AI.q.shift();
 try{var bin=atob(b64),m=bin.length,ab=new ArrayBuffer(m),u=new Uint8Array(ab);for(var i=0;i<m;i++)u[i]=bin.charCodeAt(i);
-AI.actx.decodeAudioData(ab,function(buf){aiStopTTS();
-var src=AI.actx.createBufferSource();src.buffer=buf;src.connect(AI.ttsAn);AI.ttsAn.connect(AI.actx.destination);
-src.onended=function(){if(AI.ttsSrc===src){AI.ttsSrc=null;aiResume();}};
+AI.actx.decodeAudioData(ab,function(buf){if(!AI.run){AI.qPlaying=false;return;}
+var src=AI.actx.createBufferSource();src.buffer=buf;src.connect(AI.ttsAn);
+src.onended=function(){if(AI.ttsSrc===src)AI.ttsSrc=null;aiPlayNext();};
 AI.ttsSrc=src;AI.barge=0;AI.silence=0;aiSetState('talk');
 try{if(AI.actx.state==='suspended')AI.actx.resume();}catch(e){}src.start();
-},function(){aiResume();});}catch(e){aiResume();}}
+},function(){aiPlayNext();});}catch(e){aiPlayNext();}}
+/* --- fallback to serial pipeline if streaming is unavailable --- */
+function aiFallback(b64){api('ai_stt',{audio:b64,mime:'audio/wav'}).then(function(r){
+if(!r.text||!r.text.trim()){aiResume();return;}
+return api('ai_ask',{question:r.text}).then(function(a){
+if(a.answer){AI.streamDone=true;if(a.tts)aiEnqueueTTS(a.tts);else aiResume();}
+else{toast('Xatolik');aiResume();}});
+}).catch(function(e){if(String(e.message)!=='key')toast('Tushunolmadim');aiResume();});}
 function aiStopTTS(){try{if(AI.ttsSrc){AI.ttsSrc.onended=null;AI.ttsSrc.stop();AI.ttsSrc.disconnect();}}catch(e){}AI.ttsSrc=null;
 try{if(AI.ttsAn)AI.ttsAn.disconnect();}catch(e){}}
-function aiResume(){AIBUSY=false;AI.spk=0;AI.barge=0;AI.voice=0;AI.silence=0;if(AI.run&&AI.stream){aiSetState('listen');}else{AI.state='idle';}}
+function aiResume(){AIBUSY=false;AI.spk=0;AI.barge=0;AI.voice=0;AI.silence=0;AI.q=[];AI.qPlaying=false;AI.streamDone=false;if(AI.run&&AI.stream){aiSetState('listen');}else{AI.state='idle';}}
 function wavB64(bufs,len,rate){var TR=16000,ratio=rate/TR,n=Math.floor(len/ratio);
 var flat=new Float32Array(len),o=0;for(var i=0;i<bufs.length;i++){flat.set(bufs[i],o);o+=bufs[i].length;}
 var ab=new ArrayBuffer(44+n*2),v=new DataView(ab);
