@@ -311,9 +311,11 @@ body[data-theme=ledger] #aifab{background:linear-gradient(180deg,#e8c87a,#b08b45
 @keyframes aiping{0%{transform:scale(.9);opacity:.8}70%,100%{transform:scale(1.28);opacity:0}}
 #aipage{position:fixed;inset:0;z-index:16;overflow:hidden;background:radial-gradient(ellipse at 50% 0%,var(--bg1) 0%,var(--bg2) 62%);animation:fadein .4s}
 #aicv{position:absolute;inset:0;width:100%;height:100%;display:block}
-#aiMic{padding:14px 36px;border-radius:8px;border:1px solid var(--acc-info);background:color-mix(in srgb,var(--acc-info) 12%,var(--bg2));color:var(--ink);font-family:var(--font-mono);font-size:12px;letter-spacing:3px;cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent;min-height:48px}
-#aiMic:hover{background:color-mix(in srgb,var(--acc-info) 22%,var(--bg2))}
-#aiMic.listening{border-color:var(--alert);color:var(--alert);background:color-mix(in srgb,var(--alert) 14%,var(--bg2));animation:blink 1.6s ease-in-out infinite}
+.ai-hint{font-family:var(--font-mono);font-size:11px;letter-spacing:3px;color:var(--acc-info);min-height:16px;text-align:center;opacity:.85;transition:color .3s,opacity .3s}
+.ai-hint.listen{animation:blink 2.4s ease-in-out infinite}
+.ai-hint.rec{color:var(--alert);opacity:1;animation:none}
+.ai-hint.think{color:#f5c451;opacity:1;animation:blink 1s ease-in-out infinite}
+.ai-hint.talk{opacity:0}
 #aiui{position:absolute;left:0;right:0;bottom:calc(26px + env(safe-area-inset-bottom,0px));z-index:3;display:flex;flex-direction:column;align-items:center;gap:10px;padding:0 16px}
 #aiOut{width:min(600px,94vw);max-height:38vh;overflow:auto;display:flex;flex-direction:column;gap:8px}
 #aiOut:empty{display:none}
@@ -321,9 +323,6 @@ body[data-theme=ledger] #aifab{background:linear-gradient(180deg,#e8c87a,#b08b45
 .aimsg .who{font-family:var(--font-mono);font-size:9.5px;letter-spacing:2px;display:block;margin-bottom:3px;color:var(--acc-info)}
 .aimsg.q{border-color:var(--acc-warn-line)}
 .aimsg.q .who{color:var(--st-progress)}
-#aiRow{display:flex;gap:8px;width:min(600px,94vw)}
-#aiRow input{flex:1;min-width:0;margin:0}
-#aiGo{width:48px;flex:none;border-radius:8px;border:1px solid var(--acc-line);background:color-mix(in srgb,var(--acc-info) 10%,var(--bg2));color:var(--acc-info);font-size:16px;cursor:pointer;min-height:44px;-webkit-tap-highlight-color:transparent}
 
 /* studio structure */
 body[data-theme=studio]::after{content:none}
@@ -419,8 +418,7 @@ body[data-theme=studio] .bcount,body[data-theme=studio] .badge{box-shadow:none}
 <button class="backbtn" onclick="closeAI()" style="position:fixed;top:calc(64px + env(safe-area-inset-top,0px));left:18px;z-index:2">← Orqaga</button>
 <div id="aiui">
 <div id="aiOut"></div>
-<button id="aiMic" onclick="aiMicTap()">GAPIRISH</button>
-<div id="aiRow"><input id="aiTxt" placeholder="Yoki savolni yozing..." onkeydown="if(event.key==='Enter')aiSend()"><button id="aiGo" onclick="aiSend()" aria-label="Yuborish">→</button></div>
+<div id="aiHint" class="ai-hint"></div>
 </div>
 </div>
 
@@ -649,26 +647,36 @@ ac.slice(0,7).forEach(function(a){h+='<div class="row"><div class="grow"><div>'+
 el('feed').innerHTML=h||'<div class="empty">Bo\u2018sh</div>';}
 
 /* ================= AI yadro — ovoz toʻlqini ================= */
-var AI={run:false,stream:null,actx:null,an:null,td:null,lvl:0,gx:0,gxT:0,nextGaze:0,nextBlink:0,blinkUntil:0,jump:0,cool:0,w:{aura:['#ff7a5c','#a78bfa','#38e0f8','#4ade80'],body:'#071426',eye:'#ffffff',glow:1,add:1}};
+var AI={run:false,stream:null,actx:null,proc:null,micSrc:null,ttsAn:null,ttsData:null,ttsSrc:null,state:'idle',mic:0,micRaw:0,spk:0,nf:0.006,recBufs:[],recLen:0,pre:[],preMax:6,silence:0,voice:0,barge:0,rate:0,gx:0,gxT:0,nextGaze:0,nextBlink:0,blinkUntil:0,jump:0,cool:0,w:{aura:['#ff7a5c','#a78bfa','#38e0f8','#4ade80'],body:'#071426',eye:'#ffffff',glow:1,add:1}};
 function aiWaveStyle(){var T=THEMES[document.body.getAttribute('data-theme')];if(T&&T.bot)AI.w=T.bot;}
 function aiSizeCv(){var c=el('aicv');if(!c)return;c.width=innerWidth*DPR;c.height=innerHeight*DPR;c.style.width=innerWidth+'px';c.style.height=innerHeight+'px';}
 addEventListener('resize',function(){if(el('aipage')&&!el('aipage').classList.contains('hidden'))aiSizeCv();});
 function openAI(fromRoute){if(!fromRoute){try{location.hash='#ai';}catch(e){}}
 el('aipage').classList.remove('hidden');aiWaveStyle();aiSizeCv();
 if(!AI.run){AI.run=true;requestAnimationFrame(aiLoop);}
-if(!AI.stream){try{navigator.mediaDevices.getUserMedia({audio:true}).then(function(st){AI.stream=st;
-try{AI.actx=new (window.AudioContext||window.webkitAudioContext)();var src=AI.actx.createMediaStreamSource(st);AI.an=AI.actx.createAnalyser();AI.an.fftSize=2048;AI.td=new Uint8Array(AI.an.fftSize);src.connect(AI.an);}catch(e){}
-}).catch(function(){});}catch(e){}}}
+if(!AI.stream){try{navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}}).then(function(st){AI.stream=st;
+try{AI.actx=new (window.AudioContext||window.webkitAudioContext)();AI.rate=AI.actx.sampleRate;
+AI.micSrc=AI.actx.createMediaStreamSource(st);
+AI.ttsAn=AI.actx.createAnalyser();AI.ttsAn.fftSize=1024;AI.ttsData=new Uint8Array(AI.ttsAn.fftSize);
+AI.proc=AI.actx.createScriptProcessor(2048,1,1);AI.proc.onaudioprocess=aiAudio;
+AI.micSrc.connect(AI.proc);var mg=AI.actx.createGain();mg.gain.value=0;AI.proc.connect(mg);mg.connect(AI.actx.destination);
+aiSetState('listen');}catch(e){}
+}).catch(function(){toast('Mikrofon ruxsati kerak');});}catch(e){}}
+else{if(AI.actx&&AI.actx.state==='suspended'){try{AI.actx.resume();}catch(e){}}if(AI.state==='idle')aiSetState('listen');}}
 function closeAI(){aiSoftClose();if(location.hash==='#ai'){try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}}}
-function aiSoftClose(){var p=el('aipage');if(p&&!p.classList.contains('hidden')){AI.run=false;aiStopMic();p.classList.add('hidden');}}
-function aiStopMic(){try{if(AI.stream)AI.stream.getTracks().forEach(function(t){t.stop();});}catch(e){}AI.stream=null;
-try{if(AI.actx)AI.actx.close();}catch(e){}AI.actx=null;AI.an=null;}
+function aiSoftClose(){var p=el('aipage');if(p&&!p.classList.contains('hidden')){AI.run=false;aiStopAll();p.classList.add('hidden');}}
+function aiStopAll(){aiStopTTS();try{if(AI.proc){AI.proc.onaudioprocess=null;AI.proc.disconnect();}}catch(e){}try{if(AI.micSrc)AI.micSrc.disconnect();}catch(e){}
+try{if(AI.stream)AI.stream.getTracks().forEach(function(t){t.stop();});}catch(e){}AI.stream=null;
+try{if(AI.actx)AI.actx.close();}catch(e){}AI.actx=null;AI.proc=null;AI.micSrc=null;AI.ttsAn=null;
+AI.state='idle';AI.recBufs=[];AI.recLen=0;AI.pre=[];AI.spk=0;AI.mic=0;AI.micRaw=0;AIBUSY=false;}
+function aiSetState(s){AI.state=s;var b=el('aiHint');if(b){var m={listen:'TINGLAYAPMAN…',rec:'ESHITYAPMAN…',think:'O‘YLAYAPMAN…',talk:'',idle:''};b.textContent=m[s]||'';b.className='ai-hint '+s;}}
 function rr2(g,x,y,w,h,r){r=Math.min(r,w/2,h/2);g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();}
 function aiLoop(t){if(!AI.run)return;var c=el('aicv');if(!c){AI.run=false;return;}
 var g=c.getContext('2d'),W=c.width,H=c.height,st=AI.w;t=t||0;
 g.clearRect(0,0,W,H);
-var tgt=0;if(AI.an){AI.an.getByteTimeDomainData(AI.td);var s=0,n=0;for(var i=0;i<AI.td.length;i+=16){var d=(AI.td[i]-128)/128;s+=d*d;n++;}tgt=Math.min(1,Math.sqrt(s/n)*4);}
-AI.lvl+=(tgt-AI.lvl)*.25;var lvl=AI.lvl;
+var stgt=0;if(AI.state==='talk'&&AI.ttsAn){AI.ttsAn.getByteTimeDomainData(AI.ttsData);var s=0,n=0;for(var i=0;i<AI.ttsData.length;i+=8){var d=(AI.ttsData[i]-128)/128;s+=d*d;n++;}stgt=Math.min(1,Math.sqrt(s/n)*4.2);}
+AI.spk+=(stgt-AI.spk)*.4;var lvl=AI.spk;
+AI.mic+=((AI.micRaw||0)-AI.mic)*.25;var ml=(AI.state==='listen'||AI.state==='rec')?Math.min(1,AI.mic*6):0;var react=Math.max(lvl,ml*.9);
 if(t>AI.nextBlink){AI.blinkUntil=t+130;AI.nextBlink=t+2000+Math.random()*2800;}
 var bl=t<AI.blinkUntil?.1:1;
 if(t>AI.nextGaze){AI.gxT=Math.random()*2-1;AI.nextGaze=t+1500+Math.random()*2600;}
@@ -678,12 +686,12 @@ AI.jump*=.94;
 var R0=Math.min(W,H)*.16;
 var cx0=W/2+(RM?0:Math.sin(t/2100)*R0*.05);
 var cy0=H/2+(RM?0:Math.sin(t/1300)*R0*.07)-AI.jump*R0*.4;
-var sy=1+lvl*.16-AI.jump*.1, sx=1-lvl*.07+AI.jump*.05;
+var sy=1+lvl*.16+ml*.05-AI.jump*.1, sx=1-lvl*.07+AI.jump*.05;
 var rot=(RM?0:Math.sin(t/1700)*.05)+AI.gx*.07;
 g.save();g.translate(cx0,cy0);g.rotate(rot);g.scale(sx,sy);
 /* aura arcs */
 if(st.add)g.globalCompositeOperation='lighter';
-for(var k=0;k<st.aura.length;k++){var hr=R0*(1.14+k*.11+lvl*.2);var a0=t/(2400+k*720)*(k%2?-1:1)+k*1.9;var len=3.1+(RM?0:Math.sin(t/900+k)*.6)+lvl*1.3;
+for(var k=0;k<st.aura.length;k++){var hr=R0*(1.14+k*.11+react*.2);var a0=t/(2400+k*720)*(k%2?-1:1)+k*1.9;var len=3.1+(RM?0:Math.sin(t/900+k)*.6)+react*1.3;
 g.beginPath();g.strokeStyle=st.aura[k];g.globalAlpha=st.add?.55:.75;g.lineWidth=R0*.14;g.lineCap='round';
 g.shadowBlur=st.glow?R0*.35*st.glow:0;g.shadowColor=st.aura[k];
 g.arc(0,0,hr,a0,a0+len);g.stroke();}
@@ -700,40 +708,50 @@ var ew=R0*.1,eh=R0*.3*bl,ex=R0*.32,gy=AI.gx*R0*.1;
 g.fillStyle=st.eye;g.shadowBlur=st.glow?R0*.12:0;g.shadowColor=st.eye;
 rr2(g,-ex-ew/2+gy,-R0*.08-eh/2,ew,Math.max(eh,ew*.9),ew/2);g.fill();
 rr2(g,ex-ew/2+gy,-R0*.08-eh/2,ew,Math.max(eh,ew*.9),ew/2);g.fill();
-/* mouth while talking */
-if(lvl>.05){var mw=R0*(.24+lvl*.3),mh=R0*(.05+lvl*.3);rr2(g,-mw/2+gy*.5,R0*.24,mw,mh,mh/2);g.fill();}
+/* mouth — mimics AI speech (TTS) */
+if(lvl>.04){var mw=R0*(.24+lvl*.3),mh=R0*(.05+lvl*.32);rr2(g,-mw/2+gy*.5,R0*.24,mw,mh,mh/2);g.fill();}
 g.shadowBlur=0;g.restore();
 requestAnimationFrame(aiLoop);}
 /* ================= AI savol-javob (Muxlisa STT + Gemini, api op: ai_stt/ai_ask) ================= */
-var REC={on:false,bufs:[],len:0,rate:0,node:null,src:null,gain:null},AIBUSY=false;
+var AIBUSY=false;
 function aiMsg(who,txt){var out=el('aiOut');var d=document.createElement('div');d.className='aimsg'+(who==='SIZ'?' q':'');d.innerHTML='<b class="who">'+who+'</b>'+esc(txt).replace(/\n/g,'<br>');out.appendChild(d);out.scrollTop=out.scrollHeight;}
-function aiSetBtn(t,ls){var b=el('aiMic');if(!b)return;b.textContent=t;b.classList.toggle('listening',!!ls);}
-function aiMicTap(){if(AIBUSY)return;if(REC.on){aiRecStop();return;}
-if(!AI.stream||!AI.actx){toast('Mikrofon ruxsati kerak');openAI(true);return;}
-if(AI.actx.state==='suspended'){try{AI.actx.resume();}catch(e){}}
-try{REC.bufs=[];REC.len=0;REC.rate=AI.actx.sampleRate;
-REC.src=AI.actx.createMediaStreamSource(AI.stream);
-REC.node=AI.actx.createScriptProcessor(4096,1,1);
-REC.gain=AI.actx.createGain();REC.gain.gain.value=0;
-REC.node.onaudioprocess=function(e){if(!REC.on)return;var d=e.inputBuffer.getChannelData(0);REC.bufs.push(new Float32Array(d));REC.len+=d.length;if(REC.len/REC.rate>57)aiRecStop();};
-REC.src.connect(REC.node);REC.node.connect(REC.gain);REC.gain.connect(AI.actx.destination);
-REC.on=true;aiSetBtn('YOZILMOQDA — BOSING',true);}catch(e){toast('Yozib bo‘lmadi');}}
-function aiRecStop(){if(!REC.on)return;REC.on=false;
-try{REC.src.disconnect();REC.node.disconnect();REC.gain.disconnect();}catch(e){}
-if(REC.len/REC.rate<0.6){aiSetBtn('GAPIRISH',false);toast('Juda qisqa');return;}
-AIBUSY=true;aiSetBtn('O‘YLANMOQDA...',false);
-var b64=wavB64(REC.bufs,REC.len,REC.rate);REC.bufs=[];
+/* --- continuous mic frame: VAD (auto start/stop) + barge-in --- */
+function aiAudio(e){if(!AI.run)return;var d=e.inputBuffer.getChannelData(0),n=d.length,s=0;
+for(var i=0;i<n;i++){var v=d[i];s+=v*v;}var rms=Math.sqrt(s/n);AI.micRaw=rms;
+if(AI.state==='listen'&&rms<AI.nf*2+0.006)AI.nf=AI.nf*0.97+rms*0.03;if(AI.nf<0.003)AI.nf=0.003;
+var startTh=Math.max(0.05,AI.nf*4.5),stopTh=Math.max(0.028,AI.nf*2.6),bargeTh=Math.max(0.1,AI.nf*7);
+var dt=n/AI.rate*1000;
+if(AI.state==='listen'){AI.pre.push(new Float32Array(d));if(AI.pre.length>AI.preMax)AI.pre.shift();
+if(rms>startTh)AI.voice++;else AI.voice=0;
+if(AI.voice>=2){AI.recBufs=AI.pre.slice();AI.recLen=0;for(var j=0;j<AI.recBufs.length;j++)AI.recLen+=AI.recBufs[j].length;AI.silence=0;AI.voice=0;aiSetState('rec');}
+}else if(AI.state==='rec'){AI.recBufs.push(new Float32Array(d));AI.recLen+=n;
+if(rms<stopTh)AI.silence+=dt;else AI.silence=0;
+var secs=AI.recLen/AI.rate;if((AI.silence>=800&&secs>0.35)||secs>30)aiEndUtterance();
+}else if(AI.state==='talk'){if(rms>bargeTh)AI.barge++;else AI.barge=0;
+if(AI.barge>=4){AI.barge=0;aiStopTTS();AI.recBufs=[new Float32Array(d)];AI.recLen=n;AI.silence=0;aiSetState('rec');}}}
+function aiEndUtterance(){var bufs=AI.recBufs,len=AI.recLen,rate=AI.rate;AI.recBufs=[];AI.recLen=0;AI.pre=[];
+AIBUSY=true;aiSetState('think');
+var b64=wavB64(bufs,len,rate);
 api('ai_stt',{audio:b64,mime:'audio/wav'}).then(function(r){
-if(!r.text)throw new Error('stt');
+if(!r.text||!r.text.trim()){aiResume();return;}
 aiMsg('SIZ',r.text);return aiAsk(r.text);
-}).catch(function(e){if(String(e.message)!=='key')toast('Tushunolmadim, qayta urining');aiDone();});}
+}).catch(function(e){if(String(e.message)!=='key')toast('Tushunolmadim');aiResume();});}
 function aiAsk(q){return api('ai_ask',{question:q}).then(function(r){
-if(r.answer){aiMsg('ORBIT',r.answer);if(r.tts){try{new Audio('data:audio/wav;base64,'+r.tts).play();}catch(e){}}}
-else toast('Xatolik');aiDone();
-}).catch(function(e){if(String(e.message)!=='key')toast('Xatolik');aiDone();});}
-function aiDone(){AIBUSY=false;aiSetBtn('GAPIRISH',false);}
-function aiSend(){if(AIBUSY)return;var t=el('aiTxt').value.trim();if(!t)return;el('aiTxt').value='';
-AIBUSY=true;aiSetBtn('O‘YLANMOQDA...',false);aiMsg('SIZ',t);aiAsk(t);}
+if(r.answer){aiMsg('ORBIT',r.answer);if(r.tts)aiPlayTTS(r.tts);else aiResume();}
+else{toast('Xatolik');aiResume();}
+}).catch(function(e){if(String(e.message)!=='key')toast('Xatolik');aiResume();});}
+/* --- play TTS through analyser so the avatar mouth mimics AI speech --- */
+function aiPlayTTS(b64){if(!AI.actx){aiResume();return;}
+try{var bin=atob(b64),m=bin.length,ab=new ArrayBuffer(m),u=new Uint8Array(ab);for(var i=0;i<m;i++)u[i]=bin.charCodeAt(i);
+AI.actx.decodeAudioData(ab,function(buf){aiStopTTS();
+var src=AI.actx.createBufferSource();src.buffer=buf;src.connect(AI.ttsAn);AI.ttsAn.connect(AI.actx.destination);
+src.onended=function(){if(AI.ttsSrc===src){AI.ttsSrc=null;aiResume();}};
+AI.ttsSrc=src;AI.barge=0;AI.silence=0;aiSetState('talk');
+try{if(AI.actx.state==='suspended')AI.actx.resume();}catch(e){}src.start();
+},function(){aiResume();});}catch(e){aiResume();}}
+function aiStopTTS(){try{if(AI.ttsSrc){AI.ttsSrc.onended=null;AI.ttsSrc.stop();AI.ttsSrc.disconnect();}}catch(e){}AI.ttsSrc=null;
+try{if(AI.ttsAn)AI.ttsAn.disconnect();}catch(e){}}
+function aiResume(){AIBUSY=false;AI.spk=0;AI.barge=0;AI.voice=0;AI.silence=0;if(AI.run&&AI.stream){aiSetState('listen');}else{AI.state='idle';}}
 function wavB64(bufs,len,rate){var TR=16000,ratio=rate/TR,n=Math.floor(len/ratio);
 var flat=new Float32Array(len),o=0;for(var i=0;i<bufs.length;i++){flat.set(bufs[i],o);o+=bufs[i].length;}
 var ab=new ArrayBuffer(44+n*2),v=new DataView(ab);
@@ -920,4 +938,5 @@ var _th=null;try{_th=localStorage.getItem('orbit_theme');}catch(e){}
 setTheme(_th||'holo');
 if(!KEY)el('gate').classList.remove('hidden');else boot();
 setInterval(function(){if(KEY)boot();},60000);
-</script></body></html>
+</script>
+</body></html>
