@@ -3,7 +3,8 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
-import 'package:record/record.dart';
+import 'package:mic_stream/mic_stream.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'api.dart';
 import 'wav.dart';
@@ -12,14 +13,13 @@ enum VoiceState { idle, listen, rec, think, talk }
 
 /// Hands-free continuous voice loop ported from the web dashboard:
 /// listen -> rec (VAD endpointing) -> think (stream ai_voice) -> talk
-/// with barge-in + TTS ducking. Uses native AEC via the voice-communication
-/// audio source so the mic ignores the phone's own TTS output.
+/// with barge-in + TTS ducking. Capture uses the phone's voice-communication
+/// audio source so hardware AEC keeps the mic from hearing our own TTS.
 class VoiceEngine extends ChangeNotifier {
-  final AudioRecorder _rec = AudioRecorder();
   final AudioPlayer _player = AudioPlayer();
   final Api _api = Api.instance;
 
-  static const int sr = 16000; // sample rate
+  static const int sr = 16000;
   static const int _bytesPerSec = sr * 2;
 
   VoiceState _state = VoiceState.idle;
@@ -53,26 +53,31 @@ class VoiceEngine extends ChangeNotifier {
 
   Future<void> start() async {
     if (_running) return;
-    final ok = await _rec.hasPermission();
-    if (!ok) {
+    final status0 = await Permission.microphone.request();
+    if (!status0.isGranted) {
       status = 'Mikrofon ruxsati berilmadi';
+      notifyListeners();
+      return;
+    }
+    Stream<Uint8List>? stream;
+    try {
+      stream = await MicStream.microphone(
+        audioSource: AudioSource.VOICE_COMMUNICATION,
+        sampleRate: sr,
+        channelConfig: ChannelConfig.CHANNEL_IN_MONO,
+        audioFormat: AudioFormat.ENCODING_PCM_16BIT,
+      );
+    } catch (_) {
+      stream = null;
+    }
+    if (stream == null) {
+      status = 'Mikrofon ochilmadi';
       notifyListeners();
       return;
     }
     await _player.setReleaseMode(ReleaseMode.stop);
     _playSub ??= _player.onPlayerComplete.listen((_) => _playNext());
     _running = true;
-    final stream = await _rec.startStream(const RecordConfig(
-      encoder: AudioEncoder.pcm16bits,
-      sampleRate: sr,
-      numChannels: 1,
-      echoCancel: true,
-      noiseSuppress: true,
-      autoGain: true,
-      androidConfig: AndroidRecordConfig(
-        audioSource: AndroidAudioSource.voiceCommunication,
-      ),
-    ));
     _sub = stream.listen(_onChunk, onError: (_) {});
     _setState(VoiceState.listen, 'Tinglayapman...');
   }
@@ -81,11 +86,8 @@ class VoiceEngine extends ChangeNotifier {
     _running = false;
     await _voiceSub?.cancel();
     _voiceSub = null;
-    await _sub?.cancel();
+    await _sub?.cancel(); // cancelling the subscription stops the mic
     _sub = null;
-    try {
-      await _rec.stop();
-    } catch (_) {}
     await _stopPlayback();
     _q.clear();
     _qPlaying = false;
