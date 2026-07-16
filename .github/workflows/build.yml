@@ -1,0 +1,96 @@
+name: Build Orbit APK
+on:
+  push:
+    branches: [app]
+  workflow_dispatch: {}
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: app
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.27.4
+          cache: true
+      - name: Versions
+        run: flutter --version
+      - name: Generate android scaffold
+        run: |
+          flutter create --platforms=android --org com.orbit --project-name orbit /tmp/scaffold
+          rm -rf android
+          cp -r /tmp/scaffold/android ./android
+          test -f .metadata || cp /tmp/scaffold/.metadata ./.metadata
+      - name: Patch android (perms, label, minSdk)
+        run: |
+          python3 - <<'PY'
+          import re, os
+          mf = 'android/app/src/main/AndroidManifest.xml'
+          s = open(mf, encoding='utf-8').read()
+          if 'RECORD_AUDIO' not in s:
+              perms = ('\n    <uses-permission android:name="android.permission.INTERNET"/>'
+                       '\n    <uses-permission android:name="android.permission.RECORD_AUDIO"/>'
+                       '\n    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>')
+              s = re.sub(r'(<manifest[^>]*>)', r'\1' + perms, s, count=1)
+          s = s.replace('android:label="orbit"', 'android:label="Orbit"')
+          open(mf, 'w', encoding='utf-8').write(s)
+          for g in ['android/app/build.gradle.kts', 'android/app/build.gradle']:
+              if os.path.exists(g):
+                  t = open(g, encoding='utf-8').read()
+                  t = re.sub(r'minSdk\w*\s*=?\s*[^\n]+', 'minSdk = 24', t, count=1)
+                  open(g, 'w', encoding='utf-8').write(t)
+                  print('patched', g)
+          print('manifest patched')
+          PY
+      - name: Pub get
+        run: flutter pub get
+      - name: Analyze
+        run: flutter analyze 2>&1 | tee analyze.log || true
+      - name: Test
+        run: flutter test 2>&1 | tee test.log || true
+      - name: Build APK (debug)
+        run: |
+          set -o pipefail
+          flutter build apk --debug 2>&1 | tee build.log || true
+          mkdir -p out
+          if [ -f build/app/outputs/flutter-apk/app-debug.apk ]; then
+            cp build/app/outputs/flutter-apk/app-debug.apk out/Orbit.apk
+            echo "APK_OK=yes" >> "$GITHUB_ENV"
+          else
+            echo "APK_OK=no" >> "$GITHUB_ENV"
+          fi
+      - name: Write CI status back to branch
+        if: always()
+        run: |
+          {
+            echo "# Orbit CI status"
+            echo "date: $(date -u)"
+            echo "APK_OK: ${APK_OK:-no}"
+            echo
+            echo '## analyze (tail)'; tail -n 40 analyze.log 2>/dev/null || echo none
+            echo
+            echo '## test (tail)'; tail -n 40 test.log 2>/dev/null || echo none
+            echo
+            echo '## build (tail)'; tail -n 90 build.log 2>/dev/null || echo none
+            if [ -f out/Orbit.apk ]; then echo; echo '## apk'; ls -l out/Orbit.apk; fi
+          } > CI_STATUS.md
+          git config user.email ci@orbit
+          git config user.name orbit-ci
+          git add CI_STATUS.md
+          git commit -m "ci: status [skip ci]" || true
+          git push origin HEAD:app || true
+      - name: Publish release
+        if: env.APK_OK == 'yes'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: app-latest
+          name: Orbit APK
+          files: out/Orbit.apk
