@@ -56,7 +56,7 @@ jobs:
         run: flutter analyze 2>&1 | tee analyze.log || true
       - name: Test
         run: flutter test 2>&1 | tee test.log || true
-      - name: Build APK (debug)
+      - name: Build APK (debug, universal)
         run: |
           set -o pipefail
           flutter build apk --debug 2>&1 | tee build.log || true
@@ -67,6 +67,42 @@ jobs:
           else
             echo "APK_OK=no" >> "$GITHUB_ENV"
           fi
+      - name: Build APK (debug, split-per-abi)
+        if: env.APK_OK == 'yes'
+        run: |
+          set -o pipefail
+          flutter build apk --debug --split-per-abi 2>&1 | tee -a build.log || true
+          A=build/app/outputs/flutter-apk/app-arm64-v8a-debug.apk
+          if [ -f "$A" ]; then cp "$A" out/Orbit-arm64.apk; fi
+          ls -l out || true
+      - name: Pack arm64 APK for git transport (branch apk-bin)
+        if: env.APK_OK == 'yes'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          SRC=out/Orbit-arm64.apk
+          [ -f "$SRC" ] || SRC=out/Orbit.apk
+          rm -rf /tmp/apkbin && mkdir -p /tmp/apkbin && cd /tmp/apkbin
+          cp "$GITHUB_WORKSPACE/$SRC" Orbit.apk
+          sha256sum Orbit.apk | awk '{print $1}' > Orbit.apk.sha256
+          stat -c%s Orbit.apk > Orbit.apk.bytes
+          split -b 90m -d -a 2 Orbit.apk Orbit.apk.part
+          rm -f Orbit.apk
+          {
+            echo "Orbit debug APK (arm64-v8a if present, else universal), split for git transport."
+            echo "sha256: $(cat Orbit.apk.sha256)"
+            echo "bytes:  $(cat Orbit.apk.bytes)"
+            echo "reassemble: cat Orbit.apk.part* > Orbit.apk"
+          } > README.txt
+          ls -l
+          git init -q
+          git checkout -q -b apk-bin
+          git config user.email ci@orbit
+          git config user.name orbit-ci
+          git add -A
+          git commit -qm "apk-bin $(date -u +%FT%TZ)"
+          git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" apk-bin:apk-bin
       - name: Write CI status back to branch
         if: always()
         run: |
@@ -75,12 +111,13 @@ jobs:
             echo "date: $(date -u)"
             echo "APK_OK: ${APK_OK:-no}"
             echo
-            echo '## analyze (tail)'; tail -n 40 analyze.log 2>/dev/null || echo none
+            echo '## analyze (tail)'; tail -n 30 analyze.log 2>/dev/null || echo none
             echo
-            echo '## test (tail)'; tail -n 40 test.log 2>/dev/null || echo none
+            echo '## test (tail)'; tail -n 20 test.log 2>/dev/null || echo none
             echo
-            echo '## build (tail)'; tail -n 90 build.log 2>/dev/null || echo none
-            if [ -f out/Orbit.apk ]; then echo; echo '## apk'; ls -l out/Orbit.apk; fi
+            echo '## build (tail)'; tail -n 40 build.log 2>/dev/null || echo none
+            echo
+            echo '## out'; ls -l out 2>/dev/null || echo none
           } > CI_STATUS.md
           git config user.email ci@orbit
           git config user.name orbit-ci
@@ -93,4 +130,6 @@ jobs:
         with:
           tag_name: app-latest
           name: Orbit APK
-          files: out/Orbit.apk
+          files: |
+            out/Orbit.apk
+            out/Orbit-arm64.apk
