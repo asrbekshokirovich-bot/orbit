@@ -528,6 +528,8 @@ function el(id){return document.getElementById(id);}
 var PBODY='pBody';function pb(){return el(PBODY);}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function attr(s){return esc(s).replace(/"/g,'&quot;');}
+/* qiymatni onclick="fn(&#39;...&#39;)" ichidagi JS satriga xavfsiz joylash uchun */
+function jsq(s){return attr(String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"));}
 function fmt(n){var s=Math.round(Number(n)).toString(),o='',c=0;for(var i=s.length-1;i>=0;i--){o=s[i]+o;if(++c%3===0&&i>0)o='\u2009'+o;}return o;}
 function toast(m){var t=el('toast');t.textContent=m;t.style.opacity=1;setTimeout(function(){t.style.opacity=0;},2200);}
 function api(op,extra){var body=Object.assign({op:op},extra||{});return fetch(FN,{method:'POST',headers:{'content-type':'application/json','x-orbit-key':KEY||''},body:JSON.stringify(body)}).then(function(r){if(r.status===401){el('gate').classList.remove('hidden');throw new Error('key');}return r.json();});}
@@ -873,7 +875,7 @@ var i=Math.max(BIZ.indexOf(bz),0);var pair=slug?bizColor(bz||{slug:slug},i):['#f
 if(!fromRoute){try{location.hash='#biz/'+(slug==null?'all':encodeURIComponent(slug));}catch(e){}}
 var orb=el('bpOrb');orb.style.background='radial-gradient(circle at 32% 28%,'+pair[0]+','+pair[1]+' 68%)';orb.style.boxShadow='0 0 18px '+pair[0];
 el('pTitle').textContent=bz?bz.name:'Hammasi';
-el('pSub').innerHTML=slug?'Biznes sahifasi <span class="edt clk" title="Biznesni tahrirlash" onclick="openEdit(\'biz\',\''+attr(slug)+'\')">✎</span>':"Barcha bizneslar bo'yicha";
+el('pSub').innerHTML=slug?'Biznes sahifasi <span class="edt clk" title="Biznesni tahrirlash" onclick="openEdit(\'biz\',\''+jsq(slug)+'\')">✎</span>':"Barcha bizneslar bo'yicha";
 var tabs=[['tasks','TSK Vazifalar'],['money','FIN Moliya'],['budget','BGT Budjet'],['plan','PLN Kelgusi'],['stats','ANL Tahlil'],['act','LOG Faoliyat']];
 var th='';tabs.forEach(function(t,i2){th+='<button class="chip'+(i2===0?' on':'')+'" data-tab="'+t[0]+'" onclick="setTab(this)">'+t[1]+'</button>';});
 el('pTabs').innerHTML=th;el('bizpage').classList.remove('hidden');el('bizpage').scrollTop=0;updateBpStats();['tasks','money','budget','plan','stats','act'].forEach(function(tb){loadTab(tb);});}
@@ -941,7 +943,7 @@ return h;}
 function renderTrx(d){var h='';if(!d.trx||!d.trx.length)h='<div class="empty">Tranzaksiya yo&#39;q</div>';
 else d.trx.forEach(function(x){var inc=x.direction==='income';TRXMAP[x.id]=x;
 var fc='';if(!inc&&x.fund_id){var fn=(x.funds&&x.funds.name)||'';if(fn)fc='<span class="bm'+(curSlug?' clk':'')+'" style="margin-right:6px"'+(curSlug?' title="Fondni almashtirish" onclick="event.stopPropagation();fundCycle(\''+x.id+'\',\''+x.fund_id+'\')"':'')+'>'+esc(fn)+'</span>';}
-h+='<div class="row clk" title="Tahrirlash" onclick="openEdit(\'trx\',\''+x.id+'\')"><span class="dirg '+(inc?'up':'dn')+'">'+(inc?'▲':'▼')+'</span><div class="grow"><div>'+esc(x.description||x.counterparty||(inc?'Kirim':'Xarajat'))+'</div><div class="sub">'+esc(x.businesses.name)+' · '+x.occurred_at+(x.counterparty&&x.description?' · '+esc(x.counterparty):'')+'</div></div>'+fc+'<span class="amt '+(inc?'up':'dn')+'">'+(inc?'+':'−')+fmt(x.amount)+' '+x.currency+'</span><span class="edt">✎</span></div>';});
+h+='<div class="row clk" title="Tahrirlash" onclick="openEdit(\'trx\',\''+jsq(x.id)+'\')"><span class="dirg '+(inc?'up':'dn')+'">'+(inc?'▲':'▼')+'</span><div class="grow"><div>'+esc(x.description||x.counterparty||(inc?'Kirim':'Xarajat'))+'</div><div class="sub">'+esc(x.businesses.name)+' · '+x.occurred_at+(x.counterparty&&x.description?' · '+esc(x.counterparty):'')+'</div></div>'+fc+'<span class="amt '+(inc?'up':'dn')+'">'+(inc?'+':'−')+fmt(x.amount)+' '+x.currency+'</span><span class="edt">✎</span></div>';});
 pb().innerHTML=h+crmBlock(d.crm);}
 function renderActivity(d){var h='';if(!d.activity||!d.activity.length){pb().innerHTML='<div class="empty">Bo&#39;sh</div>';return;}
 d.activity.forEach(function(a){h+='<div class="row"><div class="grow"><div>'+esc(a.action)+' · '+esc(a.entity)+'</div><div class="sub">'+String(a.created_at).slice(0,16).replace('T',' ')+'</div></div></div>';});
@@ -1001,7 +1003,7 @@ var upc=tasks.filter(function(t){return t.due_at&&t.status!=='done'&&t.status!==
 var uh='';upc.slice(0,6).forEach(function(t){TASKMAP[t.id]=t;uh+='<div class="row clk" onclick="openTask(\''+t.id+'\')"><div class="grow"><div>'+esc(t.title)+'</div><div class="sub">'+esc(t.businesses.name)+' · '+String(t.due_at).slice(0,10)+'</div></div>'+dueChip(t)+'</div>';});
 if(!uh)uh='<div class="empty">Muddatli vazifa yo&#39;q</div>';
 var ph='';plan.forEach(function(p){var inc=p.kind==='income';PLANMAP[p.id]=p;
-ph+='<div class="row"><span class="dirg '+(inc?'up':'dn')+'">'+(inc?'▲':'▼')+'</span><div class="grow"><div>'+esc(p.title)+'</div><div class="sub">'+esc((p.businesses&&p.businesses.name)||'')+(p.due_on?' · '+p.due_on:'')+(p.status&&p.status!=='planned'?' · '+(PLSTAT[p.status]||esc(p.status)):'')+'</div></div><span class="amt '+(inc?'up':'dn')+'">'+(inc?'+':'−')+fmt(p.amount)+' '+esc(p.currency)+'</span><span class="clk" style="color:var(--st-done);font-weight:700;padding:2px 6px" title="Bajarildi — tranzaksiyaga yoziladi" onclick="planSetSt(\''+p.id+'\',\'done\')">✓</span><span class="edt clk" title="Tahrirlash" onclick="openEdit(\'plan\',\''+p.id+'\')">✎</span><span class="clk" style="color:var(--alert);padding:2px 4px" title="Bekor qilish" onclick="planSetSt(\''+p.id+'\',\'cancelled\')">✕</span></div>';});
+ph+='<div class="row"><span class="dirg '+(inc?'up':'dn')+'">'+(inc?'▲':'▼')+'</span><div class="grow"><div>'+esc(p.title)+'</div><div class="sub">'+esc((p.businesses&&p.businesses.name)||'')+(p.due_on?' · '+p.due_on:'')+(p.status&&p.status!=='planned'?' · '+(PLSTAT[p.status]||esc(p.status)):'')+'</div></div><span class="amt '+(inc?'up':'dn')+'">'+(inc?'+':'−')+fmt(p.amount)+' '+esc(p.currency)+'</span><span class="clk" style="color:var(--st-done);font-weight:700;padding:2px 6px" title="Bajarildi — tranzaksiyaga yoziladi" onclick="planSetSt(\''+p.id+'\',\'done\')">✓</span><span class="edt clk" title="Tahrirlash" onclick="openEdit(\'plan\',\''+jsq(p.id)+'\')">✎</span><span class="clk" style="color:var(--alert);padding:2px 4px" title="Bekor qilish" onclick="planSetSt(\''+p.id+'\',\'cancelled\')">✕</span></div>';});
 if(!ph)ph='<div class="empty">Rejalashtirilgan kirim/xarajat yo‘q</div>';
 var h='<div class="f-label" style="margin-top:2px">Kelgusi muddatlar (vazifalar)</div>'+uh
 +'<div class="f-label" style="margin-top:16px">Rejalashtirilgan kirim / xarajat</div>'+ph;
@@ -1047,7 +1049,7 @@ if(t.created_at)rows.push(['Yaratilgan',String(t.created_at).slice(0,10)]);
 rows.forEach(function(r){h+='<div class="row" style="cursor:default"><div class="sub" style="width:92px;flex:none">'+r[0]+'</div><div class="grow">'+r[1]+'</div></div>';});
 if(t.description)h+='<div class="f-label">Tavsif</div><div class="sub" style="white-space:pre-line;line-height:1.6;font-size:12.5px">'+esc(t.description)+'</div>';
 var sl=slugOf(t);
-h+='<button class="btn" style="margin-top:14px" onclick="closeTask();openEdit(\'task\',\''+t.id+'\')">Tahrirlash</button>';
+h+='<button class="btn" style="margin-top:14px" onclick="closeTask();openEdit(\'task\',\''+jsq(t.id)+'\')">Tahrirlash</button>';
 if(sl)h+='<button class="btn" style="margin-top:8px" onclick="closeTask();goPanel(\''+esc(sl)+'\',\'tasks\')">Biznes sahifasi →</button>';
 el('tvBody').innerHTML=h;el('tview').classList.remove('hidden');}
 function closeTask(){el('tview').classList.add('hidden');}
@@ -1062,7 +1064,7 @@ var ED={type:null,id:null,st:{}};
 var TRXMAP={},PLANMAP={};
 function edSet(k,v){ED.st[k]=v;edDraw();}
 function edChips(k,opts){var h='';opts.forEach(function(o){var val=o[0]==null?'':o[0];
-h+='<button class="chip'+(String(ED.st[k]||'')===String(val)?' on':'')+'" onclick="edSet(&#39;'+k+'&#39;,&#39;'+attr(val)+'&#39;)">'+o[1]+'</button>';});return h;}
+h+='<button class="chip'+(String(ED.st[k]||'')===String(val)?' on':'')+'" onclick="edSet(&#39;'+k+'&#39;,&#39;'+jsq(val)+'&#39;)">'+o[1]+'</button>';});return h;}
 function edInput(k,type,ph){return '<input id="ed_'+k+'"'+(type?' type="'+type+'"':'')+' placeholder="'+attr(ph||'')+'" value="'+attr(ED.st[k]==null?'':ED.st[k])+'" oninput="ED.st.'+k+'=this.value">';}
 function edBizOpts(){return BIZ.map(function(b){return [b.slug,esc(b.name)];});}
 function openEdit(type,id){
