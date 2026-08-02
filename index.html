@@ -254,6 +254,13 @@ input::placeholder{color:var(--ink-dim);opacity:.55}
 .btn{width:100%;padding:13px;border:1px solid var(--stroke);border-radius:6px;background:var(--grad-accent);color:var(--on-accent);font-weight:700;font-size:14px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:var(--font-ui);margin-top:14px;transition:filter .2s,transform .1s;box-shadow:0 4px 16px rgba(0,0,0,.3);-webkit-tap-highlight-color:transparent;flex:none}
 .btn:hover{filter:brightness(1.12)}
 .btn:active{transform:scale(.985)}
+.btn.danger{background:none;border-color:var(--alert);color:var(--alert);box-shadow:none}
+.btn.danger:hover{background:color-mix(in srgb,var(--alert) 14%,transparent)}
+.ed-actions{display:flex;gap:8px;flex:none}
+.ed-actions .btn{margin-top:14px}
+.ed-actions .btn.danger{width:auto;flex:none;padding:13px 18px}
+.edt{font-size:12px;padding:2px 6px;border-radius:6px;border:1px solid var(--stroke-soft);background:var(--row);cursor:pointer;-webkit-tap-highlight-color:transparent;flex:none;line-height:1.6}
+.edt:hover{background:var(--row-hover);border-color:var(--acc-line)}
 .hidden{display:none!important}
 .lock{width:64px;height:64px;border-radius:50%;margin:4px auto 14px;display:flex;align-items:center;justify-content:center;font-size:26px;background:color-mix(in srgb,var(--acc-info) 12%,transparent);border:1px solid var(--acc-info);box-shadow:0 0 24px color-mix(in srgb,var(--acc-info) 25%,transparent)}
 #gate .glass{text-align:center}
@@ -472,10 +479,16 @@ body[data-theme=studio] .bcount,body[data-theme=studio] .badge{box-shadow:none}
 <div class="win-body">
 <div class="f-label">Turi</div><div class="chips seg opts" id="mKind"></div>
 <div class="f-label">Biznes</div><div class="chips opts" id="mBiz"></div>
-<div id="mTask"><div class="f-label">Vazifa</div><input id="tTitle" placeholder="Vazifa nomi..."><input id="tDue" type="date"><div id="mAsgWrap" class="hidden"><div class="f-label">Mas'ul</div><div class="chips opts" id="mAsg"></div></div></div>
-<div id="mTrx" class="hidden"><div class="f-label">Yo'nalish</div><div class="chips seg opts" id="mDir"></div><div class="f-label">Summa</div><input id="xAmt" type="number" placeholder="Summa"><div class="chips seg opts" id="mCur"></div><input id="xDesc" placeholder="Izoh / kontragent..."></div>
+<div id="mTask"><div class="f-label">Vazifa</div><input id="tTitle" placeholder="Vazifa nomi..."><div class="f-label">Muddat</div><input id="tDue" type="date"><div class="f-label">Muhimlik</div><div class="chips seg opts" id="mPrio"></div><div class="f-label">Tavsif</div><input id="tDesc" placeholder="Qo'shimcha izoh..."><div id="mAsgWrap" class="hidden"><div class="f-label">Mas'ul</div><div class="chips opts" id="mAsg"></div></div></div>
+<div id="mTrx" class="hidden"><div class="f-label">Yo'nalish</div><div class="chips seg opts" id="mDir"></div><div class="f-label">Summa</div><input id="xAmt" type="number" placeholder="Summa"><div class="chips seg opts" id="mCur"></div><div class="f-label">Sana</div><input id="xDate" type="date"><div class="f-label">Izoh</div><input id="xDesc" placeholder="Izoh..."><div class="f-label">Kontragent</div><input id="xCp" placeholder="Kim bilan / kimga..."></div>
 </div>
 <button class="btn" onclick="submitModal()">Saqlash</button>
+</div></div>
+
+<div id="edit" class="veil hidden" onclick="if(event.target===this)closeEdit()"><div class="glass" style="width:min(480px,94vw)" data-screen-label="Tahrirlash">
+<div class="win-head"><div class="grow"><h2><span class="dot" id="edDot" style="background:var(--acc-info);box-shadow:0 0 8px var(--acc-info)"></span><span id="edTitle">Tahrirlash</span></h2></div><button class="xbtn" onclick="closeEdit()">✕</button></div>
+<div class="win-body" id="edBody"></div>
+<div class="ed-actions"><button class="btn" onclick="edSave()">Saqlash</button><button class="btn danger" id="edDelBtn" onclick="edDelete()">O‘chirish</button></div>
 </div></div>
 
 <div id="gate" class="veil hidden"><div class="glass" style="width:min(380px,92vw)" data-screen-label="Kalit">
@@ -493,6 +506,9 @@ var COLORS={hanguk:['#2f4a6b','#1a2c42'],skillhub:['#7a2f2b','#4a1a17'],personal
 var PALETTE=[['#3f6b2e','#24421a'],['#6b3f6b','#3f2440'],['#8a6d3b','#54401e'],['#555049','#332e28'],['#7a5230','#4a3118']];
 var SSTAT={open:'#2f4a6b',in_progress:'#a8742f',done:'#3f6b2e',cancelled:'#8a8378'};
 var SNAME={open:'Ochiq',in_progress:'Jarayonda',done:'Bajarildi',cancelled:'Bekor'};
+var PRIOS=[['low','Past'],['normal','Oddiy'],['high','Yuqori'],['urgent','Shoshilinch']];
+var PNAME={low:'Past',normal:'Oddiy',high:'Yuqori',urgent:'Shoshilinch'};
+var PLSTAT={planned:'Rejada',done:'Bajarildi',cancelled:'Bekor'};
 var NEB=[[.16,.2,.5,'77,150,255',.06]];var CORE='77,150,255';var COREHI='220,240,255';var COREA=1;var CHIPC={over:'#ff6b6b',near:'#fbbf24',far:'#9fb6d4'};
 var THEMES={
 tech:{colors:{hanguk:['#35f5e5','#0b5f5a'],skillhub:['#4f9df7','#123b73'],personal:['#ffd166','#7a5206']},palette:[['#7ef0a5','#14532d'],['#7dfcf0','#155e75'],['#ffb454','#7c3a08'],['#f97316','#7c2d12'],['#cbd5e1','#475569']],sstat:{open:'#60a5fa',in_progress:'#fbbf24',done:'#34d399',cancelled:'#6b7280'},star:['#aefef5','#ffffff','#c9f8ff','#8ff5ff'],neb:[[.16,.2,.5,'53,245,229',.05],[.85,.75,.55,'24,200,232',.05],[.6,.1,.38,'16,185,129',.03],[.3,.9,.44,'53,245,229',.03]],core:'53,245,229',coreHi:'220,255,250',coreA:.55,chip:{over:'#ff6b6b',near:'#fbbf24',far:'#9fb6d4'},bot:{aura:['#35f5e5','#4ade80','#60a5fa'],body:'#06201f',eye:'#eafffb',glow:1,add:1}},
@@ -511,6 +527,9 @@ if(el('bizpage')&&!el('bizpage').classList.contains('hidden'))openPanel(curSlug,
 function el(id){return document.getElementById(id);}
 var PBODY='pBody';function pb(){return el(PBODY);}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function attr(s){return esc(s).replace(/"/g,'&quot;');}
+/* qiymatni onclick="fn(&#39;...&#39;)" ichidagi JS satriga xavfsiz joylash uchun */
+function jsq(s){return attr(String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"));}
 function fmt(n){var s=Math.round(Number(n)).toString(),o='',c=0;for(var i=s.length-1;i>=0;i--){o=s[i]+o;if(++c%3===0&&i>0)o='\u2009'+o;}return o;}
 function toast(m){var t=el('toast');t.textContent=m;t.style.opacity=1;setTimeout(function(){t.style.opacity=0;},2200);}
 function api(op,extra){var body=Object.assign({op:op},extra||{});return fetch(FN,{method:'POST',headers:{'content-type':'application/json','x-orbit-key':KEY||''},body:JSON.stringify(body)}).then(function(r){if(r.status===401){el('gate').classList.remove('hidden');throw new Error('key');}return r.json();});}
@@ -856,7 +875,7 @@ var i=Math.max(BIZ.indexOf(bz),0);var pair=slug?bizColor(bz||{slug:slug},i):['#f
 if(!fromRoute){try{location.hash='#biz/'+(slug==null?'all':encodeURIComponent(slug));}catch(e){}}
 var orb=el('bpOrb');orb.style.background='radial-gradient(circle at 32% 28%,'+pair[0]+','+pair[1]+' 68%)';orb.style.boxShadow='0 0 18px '+pair[0];
 el('pTitle').textContent=bz?bz.name:'Hammasi';
-el('pSub').textContent=slug?'Biznes sahifasi':"Barcha bizneslar bo'yicha";
+el('pSub').innerHTML=slug?'Biznes sahifasi <span class="edt clk" title="Biznesni tahrirlash" onclick="openEdit(\'biz\',\''+jsq(slug)+'\')">✎</span>':"Barcha bizneslar bo'yicha";
 var tabs=[['tasks','TSK Vazifalar'],['money','FIN Moliya'],['budget','BGT Budjet'],['plan','PLN Kelgusi'],['stats','ANL Tahlil'],['act','LOG Faoliyat']];
 var th='';tabs.forEach(function(t,i2){th+='<button class="chip'+(i2===0?' on':'')+'" data-tab="'+t[0]+'" onclick="setTab(this)">'+t[1]+'</button>';});
 el('pTabs').innerHTML=th;el('bizpage').classList.remove('hidden');el('bizpage').scrollTop=0;updateBpStats();['tasks','money','budget','plan','stats','act'].forEach(function(tb){loadTab(tb);});}
@@ -922,9 +941,9 @@ else h+='<div class="empty" style="padding:4px 0">Shu oyda CRM toʼlovi yoʼq</d
 (crm.days||[]).slice(0,10).forEach(function(r){h+='<div class="row"><div class="grow"><div class="sub">'+esc(r.day)+'</div></div><span class="amt up">+'+fmt(r.amount)+' '+esc(r.currency)+'</span></div>';});
 return h;}
 function renderTrx(d){var h='';if(!d.trx||!d.trx.length)h='<div class="empty">Tranzaksiya yo&#39;q</div>';
-else d.trx.forEach(function(x){var inc=x.direction==='income';
-var fc='';if(!inc&&x.fund_id){var fn=(x.funds&&x.funds.name)||'';if(fn)fc='<span class="bm'+(curSlug?' clk':'')+'" style="margin-right:6px"'+(curSlug?' title="Fondni almashtirish" onclick="fundCycle(\''+x.id+'\',\''+x.fund_id+'\')"':'')+'>'+esc(fn)+'</span>';}
-h+='<div class="row"><span class="dirg '+(inc?'up':'dn')+'">'+(inc?'▲':'▼')+'</span><div class="grow"><div>'+esc(x.description||x.counterparty||(inc?'Kirim':'Xarajat'))+'</div><div class="sub">'+esc(x.businesses.name)+' · '+x.occurred_at+'</div></div>'+fc+'<span class="amt '+(inc?'up':'dn')+'">'+(inc?'+':'−')+fmt(x.amount)+' '+x.currency+'</span></div>';});
+else d.trx.forEach(function(x){var inc=x.direction==='income';TRXMAP[x.id]=x;
+var fc='';if(!inc&&x.fund_id){var fn=(x.funds&&x.funds.name)||'';if(fn)fc='<span class="bm'+(curSlug?' clk':'')+'" style="margin-right:6px"'+(curSlug?' title="Fondni almashtirish" onclick="event.stopPropagation();fundCycle(\''+x.id+'\',\''+x.fund_id+'\')"':'')+'>'+esc(fn)+'</span>';}
+h+='<div class="row clk" title="Tahrirlash" onclick="openEdit(\'trx\',\''+jsq(x.id)+'\')"><span class="dirg '+(inc?'up':'dn')+'">'+(inc?'▲':'▼')+'</span><div class="grow"><div>'+esc(x.description||x.counterparty||(inc?'Kirim':'Xarajat'))+'</div><div class="sub">'+esc(x.businesses.name)+' · '+x.occurred_at+(x.counterparty&&x.description?' · '+esc(x.counterparty):'')+'</div></div>'+fc+'<span class="amt '+(inc?'up':'dn')+'">'+(inc?'+':'−')+fmt(x.amount)+' '+x.currency+'</span><span class="edt">✎</span></div>';});
 pb().innerHTML=h+crmBlock(d.crm);}
 function renderActivity(d){var h='';if(!d.activity||!d.activity.length){pb().innerHTML='<div class="empty">Bo&#39;sh</div>';return;}
 d.activity.forEach(function(a){h+='<div class="row"><div class="grow"><div>'+esc(a.action)+' · '+esc(a.entity)+'</div><div class="sub">'+String(a.created_at).slice(0,16).replace('T',' ')+'</div></div></div>';});
@@ -983,8 +1002,8 @@ function renderPlan(tasks,plan){plan=plan||[];
 var upc=tasks.filter(function(t){return t.due_at&&t.status!=='done'&&t.status!=='cancelled';}).sort(function(a,b){return String(a.due_at).localeCompare(String(b.due_at));});
 var uh='';upc.slice(0,6).forEach(function(t){TASKMAP[t.id]=t;uh+='<div class="row clk" onclick="openTask(\''+t.id+'\')"><div class="grow"><div>'+esc(t.title)+'</div><div class="sub">'+esc(t.businesses.name)+' · '+String(t.due_at).slice(0,10)+'</div></div>'+dueChip(t)+'</div>';});
 if(!uh)uh='<div class="empty">Muddatli vazifa yo&#39;q</div>';
-var ph='';plan.forEach(function(p){var inc=p.kind==='income';
-ph+='<div class="row"><span class="dirg '+(inc?'up':'dn')+'">'+(inc?'▲':'▼')+'</span><div class="grow"><div>'+esc(p.title)+'</div><div class="sub">'+esc((p.businesses&&p.businesses.name)||'')+(p.due_on?' · '+p.due_on:'')+'</div></div><span class="amt '+(inc?'up':'dn')+'">'+(inc?'+':'−')+fmt(p.amount)+' '+esc(p.currency)+'</span><span class="clk" style="color:var(--st-done);font-weight:700;padding:2px 6px" title="Bajarildi — tranzaksiyaga yoziladi" onclick="planSetSt(\''+p.id+'\',\'done\')">✓</span><span class="clk" style="color:var(--alert);padding:2px 4px" title="Bekor qilish" onclick="planSetSt(\''+p.id+'\',\'cancelled\')">✕</span></div>';});
+var ph='';plan.forEach(function(p){var inc=p.kind==='income';PLANMAP[p.id]=p;
+ph+='<div class="row"><span class="dirg '+(inc?'up':'dn')+'">'+(inc?'▲':'▼')+'</span><div class="grow"><div>'+esc(p.title)+'</div><div class="sub">'+esc((p.businesses&&p.businesses.name)||'')+(p.due_on?' · '+p.due_on:'')+(p.status&&p.status!=='planned'?' · '+(PLSTAT[p.status]||esc(p.status)):'')+'</div></div><span class="amt '+(inc?'up':'dn')+'">'+(inc?'+':'−')+fmt(p.amount)+' '+esc(p.currency)+'</span><span class="clk" style="color:var(--st-done);font-weight:700;padding:2px 6px" title="Bajarildi — tranzaksiyaga yoziladi" onclick="planSetSt(\''+p.id+'\',\'done\')">✓</span><span class="edt clk" title="Tahrirlash" onclick="openEdit(\'plan\',\''+jsq(p.id)+'\')">✎</span><span class="clk" style="color:var(--alert);padding:2px 4px" title="Bekor qilish" onclick="planSetSt(\''+p.id+'\',\'cancelled\')">✕</span></div>';});
 if(!ph)ph='<div class="empty">Rejalashtirilgan kirim/xarajat yo‘q</div>';
 var h='<div class="f-label" style="margin-top:2px">Kelgusi muddatlar (vazifalar)</div>'+uh
 +'<div class="f-label" style="margin-top:16px">Rejalashtirilgan kirim / xarajat</div>'+ph;
@@ -1009,7 +1028,8 @@ else api('activity').then(T(renderActivity)).catch(T(tabFail));}
 function cycle(id,cur){var next=cur==='open'?'in_progress':cur==='in_progress'?'done':'open';
 if(DEMO_ON){var t=DEMO.tasks.find(function(x){return x.id===id;});if(t)t.status=next;toast('✓ '+SNAME[next]);if(!el('bizpage').classList.contains('hidden'))loadTab('tasks');demoRefresh();return;}
 api('task_set_status',{id:id,status:next}).then(function(){toast('✓ '+SNAME[next]);if(!el('bizpage').classList.contains('hidden'))loadTab('tasks');boot();});}
-function openModal(){mState={kind:'task',biz:(curSlug&&!el('bizpage').classList.contains('hidden'))?curSlug:(BIZ[0]?BIZ[0].slug:null),dir:'expense',cur:'UZS',assignee:null};drawModal();el('modal').classList.remove('hidden');}
+function today(){var d=new Date(),p=function(x){return(x<10?'0':'')+x;};return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());}
+function openModal(){mState={kind:'task',biz:(curSlug&&!el('bizpage').classList.contains('hidden'))?curSlug:(BIZ[0]?BIZ[0].slug:null),dir:'expense',cur:'UZS',assignee:null,prio:'normal'};drawModal();el('xDate').value=today();el('modal').classList.remove('hidden');}
 function closeModal(){el('modal').classList.add('hidden');}
 var TASKMAP={};
 function openTask(id){var t=TASKMAP[id];if(!t)return;var col=SSTAT[t.status]||'#888';
@@ -1023,35 +1043,119 @@ var rows=[];
 if(t.businesses&&t.businesses.name)rows.push(['Biznes',esc(t.businesses.name)]);
 if(t.due_at)rows.push(['Muddat',String(t.due_at).slice(0,10)+' '+dueChip(t)]);
 if(t.assignee_hint)rows.push(['Mas’ul',esc(t.assignee_hint)]);
-if(t.priority&&t.priority!=='normal')rows.push(['Muhimlik',esc(t.priority)]);
+if(t.priority&&t.priority!=='normal')rows.push(['Muhimlik',PNAME[t.priority]||esc(t.priority)]);
 if(t.source)rows.push(['Manba',SRCN[t.source]||esc(t.source)]);
 if(t.created_at)rows.push(['Yaratilgan',String(t.created_at).slice(0,10)]);
 rows.forEach(function(r){h+='<div class="row" style="cursor:default"><div class="sub" style="width:92px;flex:none">'+r[0]+'</div><div class="grow">'+r[1]+'</div></div>';});
 if(t.description)h+='<div class="f-label">Tavsif</div><div class="sub" style="white-space:pre-line;line-height:1.6;font-size:12.5px">'+esc(t.description)+'</div>';
 var sl=slugOf(t);
-if(sl)h+='<button class="btn" style="margin-top:14px" onclick="closeTask();goPanel(\''+esc(sl)+'\',\'tasks\')">Biznes sahifasi →</button>';
+h+='<button class="btn" style="margin-top:14px" onclick="closeTask();openEdit(\'task\',\''+jsq(t.id)+'\')">Tahrirlash</button>';
+if(sl)h+='<button class="btn" style="margin-top:8px" onclick="closeTask();goPanel(\''+esc(sl)+'\',\'tasks\')">Biznes sahifasi →</button>';
 el('tvBody').innerHTML=h;el('tview').classList.remove('hidden');}
 function closeTask(){el('tview').classList.add('hidden');}
 function tvStatus(id,st){var t=TASKMAP[id];if(!t||t.status===st)return;
 if(DEMO_ON){var d2=DEMO.tasks.find(function(x){return x.id===id;});if(d2)d2.status=st;t.status=st;toast('✓ '+SNAME[st]);openTask(id);if(!el('bizpage').classList.contains('hidden'))loadTab('tasks');demoRefresh();return;}
 api('task_set_status',{id:id,status:st}).then(function(){t.status=st;toast('✓ '+SNAME[st]);openTask(id);if(!el('bizpage').classList.contains('hidden'))loadTab('tasks');boot();}).catch(function(){toast('Xatolik');});}
+/* ================= universal tahrirlash ================= */
+/* Bitta oyna — vazifa / tranzaksiya / reja / biznesni tahrirlaydi.
+   Holat ED.st da turadi, shuning uchun chip bosilganda qayta chizilsa ham
+   input qiymatlari yo'qolmaydi. */
+var ED={type:null,id:null,st:{}};
+var TRXMAP={},PLANMAP={};
+function edSet(k,v){ED.st[k]=v;edDraw();}
+function edChips(k,opts){var h='';opts.forEach(function(o){var val=o[0]==null?'':o[0];
+h+='<button class="chip'+(String(ED.st[k]||'')===String(val)?' on':'')+'" onclick="edSet(&#39;'+k+'&#39;,&#39;'+jsq(val)+'&#39;)">'+o[1]+'</button>';});return h;}
+function edInput(k,type,ph){return '<input id="ed_'+k+'"'+(type?' type="'+type+'"':'')+' placeholder="'+attr(ph||'')+'" value="'+attr(ED.st[k]==null?'':ED.st[k])+'" oninput="ED.st.'+k+'=this.value">';}
+function edBizOpts(){return BIZ.map(function(b){return [b.slug,esc(b.name)];});}
+function openEdit(type,id){
+if(DEMO_ON){toast('Demo rejimda tahrirlab bo‘lmaydi');return;}
+ED={type:type,id:id,st:{}};
+if(type==='task'){var t=TASKMAP[id];if(!t)return;
+ED.st={title:t.title||'',description:t.description||'',due:t.due_at?String(t.due_at).slice(0,10):'',status:t.status,priority:t.priority||'normal',slug:slugOf(t)||'',assignee:t.assignee_id||''};}
+else if(type==='trx'){var x=TRXMAP[id];if(!x)return;
+ED.st={direction:x.direction,amount:String(x.amount),currency:x.currency,occurred_at:x.occurred_at?String(x.occurred_at).slice(0,10):today(),description:x.description||'',counterparty:x.counterparty||'',slug:slugOf(x)||'',fund_id:x.fund_id||''};}
+else if(type==='plan'){var p=PLANMAP[id];if(!p)return;
+ED.st={kind:p.kind,title:p.title||'',amount:String(p.amount),currency:p.currency,due_on:p.due_on?String(p.due_on).slice(0,10):'',status:p.status||'planned'};}
+else if(type==='biz'){var b=BIZ.find(function(z){return z.slug===id;});if(!b)return;
+ED.st={name:b.name||'',currency_default:b.currency_default||'UZS'};}
+else return;
+edDraw();el('edit').classList.remove('hidden');}
+function closeEdit(){el('edit').classList.add('hidden');}
+function edDraw(){var h='',ttl='Tahrirlash',col='var(--acc-info)',delOk=true;
+if(ED.type==='task'){ttl='Vazifani tahrirlash';col=SSTAT[ED.st.status]||'#888';
+var mm=[['','— Belgilanmagan']];var bz=BIZ.find(function(z){return z.slug===ED.st.slug;});
+if(bz&&MEMBERS[bz.id])MEMBERS[bz.id].forEach(function(p){mm.push([p.id,esc(p.full_name)+(p.is_super_owner?' ★':'')]);});
+h='<div class="f-label">Nomi</div>'+edInput('title','','Vazifa nomi...')
++'<div class="f-label">Tavsif</div>'+edInput('description','','Qo‘shimcha izoh...')
++'<div class="f-label">Muddat</div>'+edInput('due','date','')
++'<div class="f-label">Holat</div><div class="chips seg opts">'+edChips('status',[['open','Ochiq'],['in_progress','Jarayonda'],['done','Bajarildi'],['cancelled','Bekor']])+'</div>'
++'<div class="f-label">Muhimlik</div><div class="chips seg opts">'+edChips('priority',PRIOS)+'</div>'
++'<div class="f-label">Biznes</div><div class="chips opts">'+edChips('slug',edBizOpts())+'</div>'
++(mm.length>1?'<div class="f-label">Mas’ul</div><div class="chips opts">'+edChips('assignee',mm)+'</div>':'');}
+else if(ED.type==='trx'){ttl='Tranzaksiyani tahrirlash';col=ED.st.direction==='income'?'var(--up)':'var(--dn)';
+var fo=[['','— Fondsiz']];FUNDS.forEach(function(f){fo.push([f.id,esc(f.name)+(f.is_general?' ∗':'')]);});
+h='<div class="f-label">Yo‘nalish</div><div class="chips seg opts">'+edChips('direction',[['income','<b style="color:var(--up)">▲</b> Kirim'],['expense','<b style="color:var(--dn)">▼</b> Xarajat']])+'</div>'
++'<div class="f-label">Summa</div>'+edInput('amount','number','Summa')
++'<div class="chips seg opts">'+edChips('currency',[['UZS','UZS'],['USD','USD'],['KRW','KRW']])+'</div>'
++'<div class="f-label">Sana</div>'+edInput('occurred_at','date','')
++'<div class="f-label">Izoh</div>'+edInput('description','','Izoh...')
++'<div class="f-label">Kontragent</div>'+edInput('counterparty','','Kim bilan / kimga...')
++'<div class="f-label">Biznes</div><div class="chips opts">'+edChips('slug',edBizOpts())+'</div>'
++(fo.length>1?'<div class="f-label">Fond</div><div class="chips opts">'+edChips('fund_id',fo)+'</div>':'');}
+else if(ED.type==='plan'){ttl='Rejani tahrirlash';col=ED.st.kind==='income'?'var(--up)':'var(--dn)';
+h='<div class="f-label">Turi</div><div class="chips seg opts">'+edChips('kind',[['income','▲ Kirim'],['expense','▼ Xarajat']])+'</div>'
++'<div class="f-label">Nomi</div>'+edInput('title','','Nomi...')
++'<div class="f-label">Summa</div>'+edInput('amount','number','Summa')
++'<div class="chips seg opts">'+edChips('currency',[['UZS','UZS'],['USD','USD'],['KRW','KRW']])+'</div>'
++'<div class="f-label">Muddat</div>'+edInput('due_on','date','')
++'<div class="f-label">Holat</div><div class="chips seg opts">'+edChips('status',[['planned','Rejada'],['done','Bajarildi'],['cancelled','Bekor']])+'</div>'
++'<div class="note" style="margin-top:10px">“Bajarildi” holati tranzaksiya yozmaydi — buning uchun reja qatoridagi ✓ tugmasidan foydalaning.</div>';}
+else if(ED.type==='biz'){ttl='Biznesni tahrirlash';delOk=false;
+h='<div class="f-label">Nomi</div>'+edInput('name','','Biznes nomi...')
++'<div class="f-label">Asosiy valyuta</div><div class="chips seg opts">'+edChips('currency_default',[['UZS','UZS'],['USD','USD'],['KRW','KRW']])+'</div>';}
+el('edTitle').textContent=ttl;
+var d=el('edDot');d.style.background=col;d.style.boxShadow='0 0 8px '+col;
+el('edBody').innerHTML=h;
+el('edDelBtn').classList.toggle('hidden',!delOk);}
+function edAfter(msg){toast(msg);closeEdit();
+if(!el('bizpage').classList.contains('hidden'))['tasks','money','budget','plan','stats','act'].forEach(loadTab);
+boot();}
+function edFail(r){toast((r&&r.error)?'Xatolik: '+r.error:'Xatolik');}
+function edSave(){var s=ED.st,p;
+if(ED.type==='task'){if(!String(s.title).trim()){toast('Nomini yozing');return;}
+p=api('task_update',{id:ED.id,title:String(s.title).trim(),description:String(s.description).trim()||null,due:s.due||null,status:s.status,priority:s.priority,slug:s.slug||null,assignee:s.assignee||null});}
+else if(ED.type==='trx'){var am=Number(s.amount);if(!am||am<=0){toast('Summani yozing');return;}
+p=api('trx_update',{id:ED.id,direction:s.direction,amount:am,currency:s.currency,occurred_at:s.occurred_at||null,description:String(s.description).trim()||null,counterparty:String(s.counterparty).trim()||null,slug:s.slug||null,fund_id:s.fund_id||null});}
+else if(ED.type==='plan'){var am2=Number(s.amount);if(!String(s.title).trim()){toast('Nomini yozing');return;}if(!am2||am2<=0){toast('Summani yozing');return;}
+p=api('plan_update',{id:ED.id,kind:s.kind,title:String(s.title).trim(),amount:am2,currency:s.currency,due_on:s.due_on||null,status:s.status});}
+else if(ED.type==='biz'){if(!String(s.name).trim()){toast('Nomini yozing');return;}
+p=api('biz_update',{slug:ED.id,name:String(s.name).trim(),currency_default:s.currency_default});}
+else return;
+p.then(function(r){if(r&&r.ok)edAfter('✓ Saqlandi');else edFail(r);}).catch(function(){toast('Xatolik');});}
+function edDelete(){var nm={task:'vazifa',trx:'tranzaksiya',plan:'reja'}[ED.type];if(!nm)return;
+if(!confirm('Ushbu '+nm+' butunlay o‘chirilsinmi?'))return;
+api(ED.type+'_delete',{id:ED.id}).then(function(r){if(r&&r.ok)edAfter('✓ O‘chirildi');else edFail(r);}).catch(function(){toast('Xatolik');});}
 function buildMembers(list){MEMBERS={};(list||[]).forEach(function(m){(MEMBERS[m.business_id]=MEMBERS[m.business_id]||[]).push(m);});if(el('modal')&&!el('modal').classList.contains('hidden'))drawModal();}
 function drawModal(){var kk=[['task','<i class="tcode">TSK</i>Vazifa'],['trx','<i class="tcode">FIN</i>Tranzaksiya']];var h='';
 kk.forEach(function(k){h+='<button class="chip'+(mState.kind===k[0]?' on':'')+'" onclick="mSet(&#39;kind&#39;,&#39;'+k[0]+'&#39;)">'+k[1]+'</button>';});el('mKind').innerHTML=h;
 h='';BIZ.forEach(function(b){h+='<button class="chip'+(mState.biz===b.slug?' on':'')+'" onclick="mSet(&#39;biz&#39;,&#39;'+b.slug+'&#39;)">'+esc(b.name)+'</button>';});el('mBiz').innerHTML=h;
 h='';[['income','<b style="color:var(--up)">▲</b> Kirim'],['expense','<b style="color:var(--dn)">▼</b> Xarajat']].forEach(function(x){h+='<button class="chip'+(mState.dir===x[0]?' on':'')+'" onclick="mSet(&#39;dir&#39;,&#39;'+x[0]+'&#39;)">'+x[1]+'</button>';});el('mDir').innerHTML=h;
 h='';['UZS','USD','KRW'].forEach(function(x){h+='<button class="chip'+(mState.cur===x?' on':'')+'" onclick="mSet(&#39;cur&#39;,&#39;'+x+'&#39;)">'+x+'</button>';});el('mCur').innerHTML=h;
+h='';PRIOS.forEach(function(x){h+='<button class="chip'+(mState.prio===x[0]?' on':'')+'" onclick="mSet(&#39;prio&#39;,&#39;'+x[0]+'&#39;)">'+x[1]+'</button>';});el('mPrio').innerHTML=h;
 var _bz=BIZ.find(function(x){return x.slug===mState.biz;});var _mm=(_bz&&MEMBERS[_bz.id])?MEMBERS[_bz.id]:[];
 if(_mm.length){el('mAsgWrap').classList.remove('hidden');var ah='<button class="chip'+(!mState.assignee?' on':'')+'" onclick="mSet(&#39;assignee&#39;,null)">— Belgilanmagan</button>';_mm.forEach(function(p){ah+='<button class="chip'+(mState.assignee===p.id?' on':'')+'" onclick="mSet(&#39;assignee&#39;,&#39;'+p.id+'&#39;)">'+esc(p.full_name)+(p.is_super_owner?' ★':'')+'</button>';});el('mAsg').innerHTML=ah;}else{el('mAsgWrap').classList.add('hidden');}
 el('mTask').classList.toggle('hidden',mState.kind!=='task');el('mTrx').classList.toggle('hidden',mState.kind!=='trx');}
 function mSet(k,v){mState[k]=v;if(k==='biz')mState.assignee=null;drawModal();}
 function submitModal(){if(!mState.biz){toast('Biznes tanlang');return;}
 if(mState.kind==='task'){var ti=el('tTitle').value.trim();if(!ti){toast('Nomini yozing');return;}
-if(DEMO_ON){var bz=BIZ.find(function(b){return b.slug===mState.biz;});DEMO.tasks.unshift({id:'t'+Date.now(),status:'open',title:ti,due_at:el('tDue').value||null,businesses:{name:bz?bz.name:''},business_id:bz?bz.id:'',assignee_hint:null});toast('✓ Vazifa saqlandi');el('tTitle').value='';el('tDue').value='';closeModal();demoRefresh();return;}
-api('task_add',{slug:mState.biz,title:ti,due:el('tDue').value||null,assignee:mState.assignee||null}).then(function(r){if(r.ok){toast('✓ Vazifa saqlandi');el('tTitle').value='';el('tDue').value='';mState.assignee=null;closeModal();boot();}else toast('Xatolik');});}
+var tds=el('tDesc').value.trim()||null;
+if(DEMO_ON){var bz=BIZ.find(function(b){return b.slug===mState.biz;});DEMO.tasks.unshift({id:'t'+Date.now(),status:'open',title:ti,description:tds,priority:mState.prio,due_at:el('tDue').value||null,businesses:{name:bz?bz.name:''},business_id:bz?bz.id:'',assignee_hint:null});toast('✓ Vazifa saqlandi');clearModal();closeModal();demoRefresh();return;}
+api('task_add',{slug:mState.biz,title:ti,due:el('tDue').value||null,assignee:mState.assignee||null,description:tds,priority:mState.prio}).then(function(r){if(r.ok){toast('✓ Vazifa saqlandi');clearModal();mState.assignee=null;closeModal();boot();}else toast('Xatolik');}).catch(function(){toast('Xatolik');});}
 else{var am=Number(el('xAmt').value);if(!am||am<=0){toast('Summani yozing');return;}
-if(DEMO_ON){var bz2=BIZ.find(function(b){return b.slug===mState.biz;});DEMO.trx.unshift({id:'x'+Date.now(),direction:mState.dir,amount:am,currency:mState.cur,description:el('xDesc').value.trim()||null,counterparty:null,businesses:{name:bz2?bz2.name:''},business_id:bz2?bz2.id:'',occurred_at:new Date().toISOString().slice(0,10)});toast('✓ Saqlandi');el('xAmt').value='';el('xDesc').value='';closeModal();demoRefresh();return;}
-api('trx_add',{slug:mState.biz,direction:mState.dir,amount:am,currency:mState.cur,description:el('xDesc').value.trim()||null}).then(function(r){if(r.ok){toast('✓ Saqlandi');el('xAmt').value='';el('xDesc').value='';closeModal();boot();}else toast('Xatolik');});}}
+var od=el('xDate').value||today();var cp=el('xCp').value.trim()||null;
+if(DEMO_ON){var bz2=BIZ.find(function(b){return b.slug===mState.biz;});DEMO.trx.unshift({id:'x'+Date.now(),direction:mState.dir,amount:am,currency:mState.cur,description:el('xDesc').value.trim()||null,counterparty:cp,businesses:{name:bz2?bz2.name:''},business_id:bz2?bz2.id:'',occurred_at:od});toast('✓ Saqlandi');clearModal();closeModal();demoRefresh();return;}
+api('trx_add',{slug:mState.biz,direction:mState.dir,amount:am,currency:mState.cur,description:el('xDesc').value.trim()||null,counterparty:cp,occurred_at:od}).then(function(r){if(r.ok){toast('✓ Saqlandi');clearModal();closeModal();boot();}else toast('Xatolik');}).catch(function(){toast('Xatolik');});}}
+function clearModal(){['tTitle','tDue','tDesc','xAmt','xDesc','xCp'].forEach(function(i){if(el(i))el(i).value='';});if(el('xDate'))el('xDate').value=today();}
 var _th=null;try{_th=localStorage.getItem('orbit_theme');}catch(e){}
 setTheme(_th||'holo');
 if(!KEY)el('gate').classList.remove('hidden');else boot();
