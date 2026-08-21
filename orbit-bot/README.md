@@ -151,3 +151,65 @@ cannot leave a stale tail behind. Then hit `telegram-bot?health=1` and confirm
 `loaded_from` is `_bot_code` and `load_error` is null — if the blob were bad the
 loader would silently fall back to `_bot_code_good` and keep running the old
 bot.
+
+## The fix of 2026-08-21, part two — extraction, and the AI call that never ran
+
+### Every AI call was failing
+
+`ae()` built every request with `temperature: e.temperature ?? .5`. Sampling
+parameters were removed from the current Claude models — `temperature` returns a
+400 on Sonnet 5, Opus 5, Opus 4.7/4.8 and Fable 5 — and `ae()` throws on any
+status outside `[500, 503, 529]`. So on any current model, every call through
+`ae()` died before it began.
+
+The digest hid this. Its call is wrapped in a bare `catch` that falls back to a
+plain join:
+
+```js
+try { y = await ae(t, {…, temperature: .3}) } catch { y = `${d}\nYubormaganlar: …` }
+```
+
+That fallback is exactly what the 2026-08-18 digest printed:
+
+```
+(bugun hech kim hisobot yubormadi)
+Yubormaganlar: Diyora, Nigina, Odina, Omina, Xushnud
+```
+
+Two lines, template-shaped — not something the model wrote. `ae()` no longer
+sends `temperature` at all; the call sites still pass it and it is now ignored.
+Older models fall back to their own default, which is fine for a digest and for
+extraction against a strict JSON instruction.
+
+### Reports are now split into sections
+
+`Er(cfg, text)` asks Claude — through the same `ae()`, so it honours whatever
+`app_config.anthropic_model` holds — to split one Uzbek report into
+`done` / `blockers` / `plans` / `summary`, and is told to leave a field empty
+rather than invent content for it. `Jp()` pulls the JSON out of the reply,
+tolerating code fences and surrounding prose, and returns `null` instead of
+throwing when there is nothing parseable.
+
+`Ee()` runs the extraction before saving. If it fails or returns nothing, the
+empty record is saved exactly as before and the digest's `raw_text` fallback
+still carries the report — so a bad AI day degrades to the previous behaviour
+rather than losing anything.
+
+`Rr(sections, rawText)` renders a report for the owner: the sections that have
+content, or the raw text when none do. Everything it emits is HTML-escaped,
+since it goes out with `parse_mode: HTML`.
+
+```
+🕘 Kechikkan hisobot — Diyora · 2026-08-21 21:14
+
+✅ Bajardi: Skladni sanadim
+⚠️ Muammo: Yuk kech keldi
+📌 Reja: Ertaga hisobotni yopaman
+```
+
+### Worth knowing
+
+`ae()`'s fallback model is `claude-haiku-4-5-20251001`. The current ID is
+`claude-haiku-4-5` — the dated suffix may not resolve. It was left alone here
+because it only matters once the primary model is unavailable, but it is worth
+correcting the next time this file is touched.
