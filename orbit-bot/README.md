@@ -87,3 +87,67 @@ Then hit `telegram-bot?health=1`; it reports `loaded_from` and `load_error`.
   surface) failed writes on the inbox_events path.
 - The bot source should live in this repository and be *deployed* into
   `_bot_code`, rather than only existing there.
+
+## The fix of 2026-08-21 — reports that arrive after the digest
+
+### What was wrong
+
+Two separate faults, which together made a submitted report look like it
+vanished.
+
+**The digest could not carry what anyone wrote.** `Ee`, the handler for a
+submitted report, saved it with the four extracted fields hard-coded empty:
+
+```js
+await ft(a, { done: "", blockers: "", plans: "", summary: "" }, l, s)
+```
+
+Nothing ever parsed the text into sections, so `done`/`blockers`/`plans` were
+always `null`. The digest built each person's line from exactly those three
+columns — it selected `raw_text` and then never used it — so a real report
+reached the owner as `- Diyora: bajardi=[-] muammo=[-] reja=[-]`.
+
+**A report that missed its digest reached nobody.** `staff_digest` runs once a
+day. `Ee` answered "✅ Hisobot qabul qilindi" and stopped there, forwarding
+nothing. Anything written after the digest sat in `daily_reports` unread.
+
+A third, quieter one: `report_date` came from the wall-clock date, so a report
+written at 00:30 was filed under the *next* day and counted as missing from the
+day it was actually about.
+
+### What changed
+
+| | |
+|---|---|
+| `Bd()` | New. The workday a report belongs to: before 04:00 Tashkent it is still the previous day. `B()` is untouched and still means "today". |
+| `ft()` | Files reports against `Bd()` instead of `B()`. |
+| `Dg(day)` | New. Whether the digest for that day has already gone out — read from the `staff_digest_cron` row the digest already writes to `audit_log`, so no new table. |
+| `Ee()` | If the digest has gone, forwards the report to the owner immediately, tagged `🕘 Kechikkan hisobot` with name and time, and tells the sender it was passed on separately. Logs `staff_report_late`. |
+| `pt()` | Falls back to `raw_text` (whitespace collapsed, 600 chars) when no section was extracted. Extracted sections still win, and empty ones are dropped rather than printed as `[-]`. |
+
+Deliberately unchanged: the 20:00 digest still runs once and still reads the
+same tables; nothing was added to the schema.
+
+### Still open
+
+- **Sections are never extracted.** The fallback means the owner now reads the
+  report, but `done`/`blockers`/`plans` stay null. Parsing the text into the
+  three sections is the next piece of work.
+- **Nobody is reminded.** `_t` (`staff_remind`) is written correctly and
+  messages everyone with no report that day, but *when* it runs is a schedule
+  outside this repository. On 2026-08-18 all five staff were listed as missing,
+  which is what a reminder that never fires looks like. Check that the
+  `staff_remind` job exists and fires before 20:00.
+
+### Deploying it
+
+```bash
+node tools/pack.mjs        # regenerates deploy/_bot_code.sql from bot-source.ts
+```
+
+Run `deploy/_bot_code.sql` in the SQL editor of project `zqpglkxbtpkvyraxquao`.
+It replaces `_bot_code` inside one transaction, so a longer previous blob
+cannot leave a stale tail behind. Then hit `telegram-bot?health=1` and confirm
+`loaded_from` is `_bot_code` and `load_error` is null — if the blob were bad the
+loader would silently fall back to `_bot_code_good` and keep running the old
+bot.
